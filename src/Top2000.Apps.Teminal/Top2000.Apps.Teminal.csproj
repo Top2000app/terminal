@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="Figgle" Version="0.5.1" />
+    <PackageReference Include="RickNeeftDevelopment.Top2000App.Features" Version="1.0.0" />
+    <PackageReference Include="RickNeeftDevelopment.Top2000App.Features.SQLite" Version="1.0.0" />
     <PackageReference Include="Terminal.Gui" Version="1.17.1" />
   </ItemGroup>
 

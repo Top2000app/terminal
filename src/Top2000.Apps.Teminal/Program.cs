@@ -1,6 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Immutable;
-using System.Linq;
 using Figgle;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,16 +36,17 @@ await updateOnline.RunAsync(onlineSource);
 var mediator = serviceProvider.GetRequiredService<IMediator>();
 
 var editions = await mediator.Send(new AllEditionsRequest());
-var listings = await mediator.Send(new AllListingsOfEditionRequest(editions.First().Year));
+var listings = await mediator.Send(new AllListingsOfEditionRequest { Year = 2022 });
 
-var toShow = listings
-    .Select(x => new ViewableTrackListing
-    {
-        Input = x.Position.ToString().PadRight(6, ' ') + x.Title + Environment.NewLine + "      " + x.Artist
-    })
-    .ToList();
+var toShow = new List<string>();
 
-var try1 = new ListingDataSource(listings);
+foreach (var item in listings)
+{
+    toShow.Add(item.Position.ToString().PadRight(6, ' ') + item.Title);
+    toShow.Add("      " + item.Artist);
+}
+
+var try1 = new CustomListWrapper(toShow);
 
 Application.Init();
 var menu = new MenuBar([
@@ -67,11 +66,11 @@ var win = new Window(editions.First().Year.ToString())
 {
     X = 0,
     Y = 1,
-    //Width = Dim.Fill(),
-    //Height = Dim.Fill() - 1
+    Width = Dim.Fill(),
+    Height = Dim.Fill() - 1
 };
 
-var list = new MultiLineListView()
+var list = new ListView()
 {
     X = 1,
     Y = 1,
@@ -82,8 +81,8 @@ var list = new MultiLineListView()
 
 win.Add(list);
 
-//list.SetSource(listings.ToList());
-//
+////list.SetSource(listings.ToList());
+////
 
 list.Source = try1;
 
@@ -126,138 +125,205 @@ Application.Top.Add(menu, win);
 Application.Run();
 Application.Shutdown();
 
-public class ListingDataSource : IListDataSource
+
+public class CustomListWrapper : IListDataSource
 {
-    private readonly List<TrackListing> items;
+    IList src;
+    BitArray marks;
+    int count, len;
 
-    public ListingDataSource(ImmutableHashSet<TrackListing> items)
+    /// <inheritdoc/>
+    public CustomListWrapper(IList source)
     {
-        this.items = items.ToList();
-    }
-
-    public int Count => items.Count * 2;
-
-    public int Length => items.Count * 2;
-
-    public bool IsMarked(int item) => false;
-    public void Render(ListView container, ConsoleDriver driver, bool selected, int item, int col, int line, int width, int start = 0)
-    {
-        container.Move(col, item * 2);
-        var t = items[item];
-        //RenderUstr(driver, t.Title, col, line, width);
-
-        var firstLine = t.Position.ToString().PadRight(6, ' ') + t.Title;
-        var secondLine = "      " + t.Artist;
-
-        driver.AddStr(firstLine.PadRight(width));
-        container.Move(col, item * 2 + 1);
-        driver.AddStr(secondLine.PadRight(width));
-        //line++;
-        //container.Move(col, line+1);
-
-        //col = 0;
-        //driver.Move(col, line + 1);
-        //driver.AddStr(t.Artist);
-        //RenderUstr(driver, t.Artist, col, line, width);
-    }
-
-    public void SetMark(int item, bool value) 
-    {
-        // not supported
-    }
-    public IList ToList() => items;
-}
-
-public class ViewableTrackListing
-{
-    public string Input { get; set; }
-
-    public override string ToString()
-    {
-        return Input;
-    }
-}
-
-
-class MultiLineListView : ListView
-{
-    public MultiLineListView() : base(new string[] { }) { }
-
-    //// Override the Redraw method to customize item rendering
-    //public override void Redraw(Rect bounds)
-    //{
-    //    base.Redraw(bounds);
-
-    //    for (int i = 0; i < Source.Count; i++)
-    //    {
-    //        if (i >= region.Y && i < bounds.Y + bounds.Height)
-    //        {
-    //            var item =(TrackListing) Source.ToList()[i]!;
-
-    //           // var pos = region.X;
-
-    //            // Render the first line
-    //            Move(0, 2 * (i - bounds.Y));
-    //            var firstLine = item.Title;
-    //            Driver.AddStr(firstLine.PadRight(bounds.Width));
-
-    //            Move(0, 2 * (i - bounds.Y) + 1);
-    //            var secondLine = item.Artist;
-    //            Driver.AddStr(secondLine.PadRight(bounds.Width));
-    //        }
-    //    }
-    //}
-
-    public override void Redraw(Rect bounds)
-    {
-        var current = ColorScheme.Focus;
-        Driver.SetAttribute(current);
-        Move(0, 0);
-        var f = Frame;
-        var item = base.TopItem;
-        bool focused = HasFocus;
-        int col = base.AllowsMarking ? 2 : 0;
-        int start = 0;
-
-        for (int row = 0; row < f.Height * 2; row++, item++)
+        if (source != null)
         {
-            bool isSelected = item == (base.SelectedItem * 2);
-
-            var newcolor = focused ? (isSelected ? ColorScheme.Focus : GetNormalColor())
-                           : (isSelected ? ColorScheme.HotNormal : GetNormalColor());
-
-            if (newcolor != current)
-            {
-                Driver.SetAttribute(newcolor);
-                current = newcolor;
-            }
-
-            Move(0, row);
-            if (Source == null || item >= Source.Count)
-            {
-                for (int c = 0; c < f.Width; c++)
-                    Driver.AddRune(' ');
-            }
-            else
-            {
-                var rowEventArgs = new ListViewRowEventArgs(item);
-                OnRowRender(rowEventArgs);
-                if (rowEventArgs.RowAttribute != null && current != rowEventArgs.RowAttribute)
-                {
-                    current = (Terminal.Gui.Attribute)rowEventArgs.RowAttribute;
-                    Driver.SetAttribute(current);
-                }
-                //if (allowsMarking)
-                //{
-                //    Driver.AddRune(source.IsMarked(item) ? (AllowsMultipleSelection ? Driver.Checked : Driver.Selected) :
-                //        (AllowsMultipleSelection ? Driver.UnChecked : Driver.UnSelected));
-                //    Driver.AddRune(' ');
-                //}
-                Source.Render(this, Driver, isSelected, item, col, row, f.Width - col, start);
-            }
+            count = source.Count;
+            marks = new BitArray(count);
+            src = source;
+            len = GetMaxLengthItem();
         }
     }
 
-    // Override the Height property to reflect that each item takes 2 rows
-    //   public new int Height => 2 * Source.Count;
+    /// <inheritdoc/>
+    public int Count
+    {
+        get
+        {
+            CheckAndResizeMarksIfRequired();
+            return src?.Count ?? 0;
+        }
+    }
+
+    /// <inheritdoc/>
+    public int Length => len;
+
+    void CheckAndResizeMarksIfRequired()
+    {
+        if (src != null && count != src.Count)
+        {
+            count = src.Count;
+            BitArray newMarks = new BitArray(count);
+            for (var i = 0; i < Math.Min(marks.Length, newMarks.Length); i++)
+            {
+                newMarks[i] = marks[i];
+            }
+            marks = newMarks;
+
+            len = GetMaxLengthItem();
+        }
+    }
+
+    int GetMaxLengthItem()
+    {
+        if (src == null || src?.Count == 0)
+        {
+            return 0;
+        }
+
+        int maxLength = 0;
+        for (int i = 0; i < src.Count; i++)
+        {
+            var t = src[i];
+            int l;
+            if (t is ustring u)
+            {
+                l = TextFormatter.GetTextWidth(u);
+            }
+            else if (t is string s)
+            {
+                l = s.Length;
+            }
+            else
+            {
+                l = t.ToString().Length;
+            }
+
+            if (l > maxLength)
+            {
+                maxLength = l;
+            }
+        }
+
+        return maxLength;
+    }
+
+    void RenderUstr(ConsoleDriver driver, ustring ustr, int col, int line, int width, int start = 0)
+    {
+        ustring str = start > ustr.ConsoleWidth ? string.Empty : ustr.Substring(Math.Min(start, ustr.ToRunes().Length - 1));
+        ustring u = TextFormatter.ClipAndJustify(str, width, TextAlignment.Left);
+        driver.AddStr(u);
+        width -= TextFormatter.GetTextWidth(u);
+        while (width-- + start > 0)
+        {
+            driver.AddRune(' ');
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Render(ListView container, ConsoleDriver driver, bool marked, int item, int col, int line, int width, int start = 0)
+    {
+        var savedClip = container.ClipToBounds();
+        container.Move(Math.Max(col - start, 0), line);
+        var t = src?[item];
+
+        bool isSelected = item == container.SelectedItem;
+
+        if (!isSelected)
+        {
+            // should be selected? 
+            var otherItem = item;
+
+            if (t.ToString().StartsWith("  "))
+            {
+                otherItem--; // look at the previous
+            }
+            else
+            {
+                otherItem++; // look at the next
+            }
+
+            isSelected = otherItem == container.SelectedItem;
+        }
+
+        if (isSelected)
+        {
+            driver.SetAttribute(container.ColorScheme.Focus);
+        }
+        else
+        {
+            driver.SetAttribute(container.ColorScheme.Normal);
+        }
+
+
+        if (t == null)
+        {
+            RenderUstr(driver, ustring.Make(""), col, line, width);
+        }
+        else
+        {
+            if (t is ustring u)
+            {
+                RenderUstr(driver, u, col, line, width, start);
+            }
+            else if (t is string s)
+            {
+                RenderUstr(driver, s, col, line, width, start);
+            }
+            else
+            {
+                RenderUstr(driver, t.ToString(), col, line, width, start);
+            }
+        }
+        driver.Clip = savedClip;
+    }
+
+    /// <inheritdoc/>
+    public bool IsMarked(int item)
+    {
+        if (item >= 0 && item < Count)
+            return marks[item];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public void SetMark(int item, bool value)
+    {
+        if (item >= 0 && item < Count)
+            marks[item] = value;
+    }
+
+    /// <inheritdoc/>
+    public IList ToList()
+    {
+        return src;
+    }
+
+    /// <inheritdoc/>
+    public int StartsWith(string search)
+    {
+        if (src == null || src?.Count == 0)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < src.Count; i++)
+        {
+            var t = src[i];
+            if (t is ustring u)
+            {
+                if (u.ToUpper().StartsWith(search.ToUpperInvariant()))
+                {
+                    return i;
+                }
+            }
+            else if (t is string s)
+            {
+                if (s.StartsWith(search, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
 }
