@@ -1,7 +1,9 @@
 ﻿using System.Collections.ObjectModel;
+using System.Data;
 using MediatR;
 using Terminal.Gui;
 using Top2000.Apps.Teminal.Views;
+using Top2000.Apps.Teminal.Views.ListingView;
 using Top2000.Features.AllEditions;
 using Top2000.Features.AllListingsOfEdition;
 
@@ -12,10 +14,12 @@ public class MainWindow : Toplevel
     private readonly IMediator mediator;
     private readonly TrackInformationView view;
 
-    private readonly ObservableCollection<string> listings = [];
+    private readonly ObservableCollection<TrackListingItem> listings = [];
+
+    public FrameView ListingFrame { get; }
 
     private readonly ListView ListingListView;
-    private int? selectedYear;
+    private int? selectedYear = null;
 
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, int selectedYear)
     {
@@ -40,19 +44,9 @@ public class MainWindow : Toplevel
             ]
         };
 
-        //var info = new View
-        //{
-        //    X = Pos.Percent(36),
-        //    Y = 0,
-        //    Width = Dim.Fill(),
-        //    Height = Dim.Fill(),
-        //};
-
         this.ShowListings(trackListings);
 
-
-
-        var listFrame = new FrameView()
+        this.ListingFrame = new()
         {
             X = 0,
             Y = Pos.Bottom(menu),
@@ -70,13 +64,13 @@ public class MainWindow : Toplevel
             Height = Dim.Fill(),
             Width = Dim.Fill(),
         };
-        this.ListingListView.SelectedItemChanged += this.ListingListView_SelectedItemChanged;
+        this.ListingListView.OpenSelectedItem += this.ListingOpenSelectedItem;
 
-        listFrame.Add(this.ListingListView);
+        this.ListingFrame.Add(this.ListingListView);
 
         var infoFrame = new FrameView()
         {
-            X = Pos.Right(listFrame),
+            X = Pos.Right(this.ListingFrame),
             Y = Pos.Bottom(menu),
             Width = Dim.Percent(71),
             Height = Dim.Fill(),
@@ -85,56 +79,66 @@ public class MainWindow : Toplevel
 
         infoFrame.Add(view);
 
-        var top2000DataSource = new ListingListWrapper<string>(this.listings.ToList());
+        var top2000DataSource = new Top2000ListingListWrapper(this.listings.ToList());
         this.ListingListView.Source = top2000DataSource;
 
-        this.Add(menu, listFrame, infoFrame);
+        this.Add(menu, this.ListingFrame, infoFrame);
     }
 
-
-    private bool IsListingVisible = true;
-    private async void ListingListView_SelectedItemChanged(object? sender, ListViewItemEventArgs e)
+    private async void ListingOpenSelectedItem(object? sender, ListViewItemEventArgs e)
     {
-        if (this.IsListingVisible)
+        var selectedItem = (TrackListingItem)e.Value;
+
+        if (selectedItem.ItemType == TrackListingItem.Type.Group)
         {
-            if (e.Value is string selectedItem)
-            {
-                if (selectedItem[0] == 'g')
-                {
-                    // group select, change the list
-                    this.IsListingVisible = false;
-
-                    var groups = this.listings
-                        .Where(x => x[0] == 'g')
-                        .ToList();
-
-                    var top2000DataSource = new ListingListWrapper<string>(groups);
-                    this.ListingListView.Source = top2000DataSource;
-                }
-
-                if (selectedItem[0] == 'a' || selectedItem[0] == 't')
-                {
-                    if (int.TryParse(selectedItem[1..5].Trim(), out var trackId))
-                    {
-                        await this.view.LoadTrackInformationAsync(trackId);
-                    }
-                }
-            }
+            this.HandleOpenGroup(selectedItem);
         }
         else
         {
-            if (e.Value is string selectedGroup)
-            {
-                // groups are shown
-                this.IsListingVisible = true;
-                var top2000DataSource = new ListingListWrapper<string>(this.listings.ToList());
-                this.ListingListView.Source = top2000DataSource;
+            await this.HandleOpenTrackAsync(selectedItem);
+        }
+    }
 
-                var rows = this.listings.IndexOf(selectedGroup);
-                var didit = this.ListingListView.ScrollVertical(rows + 1);
-                this.SetNeedsDisplay();
+    private async Task HandleOpenTrackAsync(TrackListingItem selectedItem)
+    {
+        if (selectedItem.TrackId is not null)
+        {
+            await this.view.LoadTrackInformationAsync(selectedItem.TrackId.Value);
+        }
+    }
 
-            }
+    private ListViewState state = ListViewState.Listing;
+
+    private enum ListViewState
+    {
+        Listing,
+        Groups
+    }
+
+    private void HandleOpenGroup(TrackListingItem selectedItem)
+    {
+        if (this.state == ListViewState.Groups)
+        {
+            this.state = ListViewState.Listing;
+
+            this.ListingListView.Source = new Top2000ListingListWrapper(this.listings.ToList());
+
+            var rows = this.listings.IndexOf(selectedItem);
+
+            this.ListingListView.SelectedItem = rows + this.ListingListView.Viewport.Height - 1;
+            this.ListingListView.EnsureSelectedItemVisible();
+            this.ListingListView.SelectedItem = rows;
+
+        }
+        else
+        {
+            this.state = ListViewState.Groups;
+
+            var groups = this.listings
+             .Where(x => x.ItemType == TrackListingItem.Type.Group)
+             .ToList();
+
+            this.ListingListView.Source = new Top2000ListingListWrapper(groups);
         }
     }
 
@@ -157,11 +161,26 @@ public class MainWindow : Toplevel
             var group = Position(item, this.listings.Count);
             if (groups.Add(group))
             {
-                this.listings.Add("g     " + group);
+                this.listings.Add(new TrackListingItem
+                {
+                    Content = group,
+                    ItemType = TrackListingItem.Type.Group,
+                });
             }
 
-            this.listings.Add("t" + item.TrackId.ToString().PadRight(5, ' ') + item.Position.ToString().PadRight(6, ' ') + item.Title);
-            this.listings.Add("a" + item.TrackId.ToString().PadRight(5, ' ') + "      " + item.Artist);
+            this.listings.Add(new TrackListingItem
+            {
+                ItemType = TrackListingItem.Type.Track,
+                Content = $"{item.Position,-6}{item.Title}",
+                TrackId = item.TrackId,
+            });
+
+            this.listings.Add(new TrackListingItem
+            {
+                ItemType = TrackListingItem.Type.Artist,
+                Content = $"      {item.Artist}",
+                TrackId = item.TrackId,
+            });
         }
     }
 
@@ -185,5 +204,4 @@ public class MainWindow : Toplevel
 
         return $"{min} - {max}";
     }
-
 }
