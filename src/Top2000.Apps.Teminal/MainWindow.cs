@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Data;
 using MediatR;
 using Terminal.Gui;
 using Top2000.Apps.Teminal.Views;
@@ -15,10 +14,10 @@ public class MainWindow : Toplevel
     private readonly TrackInformationView view;
 
     private readonly ObservableCollection<TrackListingItem> listings = [];
+    private readonly ObservableCollection<TrackListingItem> groups = [];
 
     public FrameView ListingFrame { get; }
 
-    private readonly ListView ListingListView;
     private int? selectedYear = null;
 
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, int selectedYear)
@@ -56,17 +55,18 @@ public class MainWindow : Toplevel
             Title = selectedYear.ToString()
         };
 
-        this.ListingListView = new()
+        this.ListingFrame.Add(new Top2000ListingListView
         {
             X = 0,
             Y = 0,
             AllowsMultipleSelection = false,
             Height = Dim.Fill(),
             Width = Dim.Fill(),
-        };
-        this.ListingListView.OpenSelectedItem += this.ListingOpenSelectedItem;
-
-        this.ListingFrame.Add(this.ListingListView);
+            OnOpenTrackAsync = this.HandleOpenTrackAsync,
+            Source = new Top2000ListingListWrapper(this.listings),
+            Top2000Source = new Top2000ListingListWrapper(this.listings),
+            Top2000GroupedSource = new Top2000ListingListWrapper(this.groups),
+        });
 
         var infoFrame = new FrameView()
         {
@@ -79,66 +79,15 @@ public class MainWindow : Toplevel
 
         infoFrame.Add(view);
 
-        var top2000DataSource = new Top2000ListingListWrapper(this.listings.ToList());
-        this.ListingListView.Source = top2000DataSource;
-
         this.Add(menu, this.ListingFrame, infoFrame);
     }
 
-    private async void ListingOpenSelectedItem(object? sender, ListViewItemEventArgs e)
-    {
-        var selectedItem = (TrackListingItem)e.Value;
-
-        if (selectedItem.ItemType == TrackListingItem.Type.Group)
-        {
-            this.HandleOpenGroup(selectedItem);
-        }
-        else
-        {
-            await this.HandleOpenTrackAsync(selectedItem);
-        }
-    }
 
     private async Task HandleOpenTrackAsync(TrackListingItem selectedItem)
     {
         if (selectedItem.TrackId is not null)
         {
             await this.view.LoadTrackInformationAsync(selectedItem.TrackId.Value);
-        }
-    }
-
-    private ListViewState state = ListViewState.Listing;
-
-    private enum ListViewState
-    {
-        Listing,
-        Groups
-    }
-
-    private void HandleOpenGroup(TrackListingItem selectedItem)
-    {
-        if (this.state == ListViewState.Groups)
-        {
-            this.state = ListViewState.Listing;
-
-            this.ListingListView.Source = new Top2000ListingListWrapper(this.listings.ToList());
-
-            var rows = this.listings.IndexOf(selectedItem);
-
-            this.ListingListView.SelectedItem = rows + this.ListingListView.Viewport.Height - 1;
-            this.ListingListView.EnsureSelectedItemVisible();
-            this.ListingListView.SelectedItem = rows;
-
-        }
-        else
-        {
-            this.state = ListViewState.Groups;
-
-            var groups = this.listings
-             .Where(x => x.ItemType == TrackListingItem.Type.Group)
-             .ToList();
-
-            this.ListingListView.Source = new Top2000ListingListWrapper(groups);
         }
     }
 
@@ -153,19 +102,22 @@ public class MainWindow : Toplevel
 
     public void ShowListings(HashSet<TrackListing> trackListings)
     {
-        var groups = new HashSet<string>();
+        var groupsSet = new HashSet<string>();
 
         this.listings.Clear();
         foreach (var item in trackListings)
         {
             var group = Position(item, this.listings.Count);
-            if (groups.Add(group))
+            if (groupsSet.Add(group))
             {
-                this.listings.Add(new TrackListingItem
+                var trackListItem = new TrackListingItem
                 {
                     Content = group,
                     ItemType = TrackListingItem.Type.Group,
-                });
+                };
+
+                this.groups.Add(trackListItem);
+                this.listings.Add(trackListItem);
             }
 
             this.listings.Add(new TrackListingItem
