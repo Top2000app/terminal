@@ -14,13 +14,15 @@ public class TrackInformationView : View
 
         this.X = 0;
         this.Y = 0;
-        this.Height = Dim.Fill(1);
-        this.Width = Dim.Fill(1);
+        this.Height = Dim.Fill();
+        this.Width = Dim.Fill();
     }
 
     public async Task LoadTrackInformationAsync(int trackId)
     {
         var trackInformation = await this.mediator.Send(new TrackInformationRequest { TrackId = trackId });
+
+
 
         this.Add(new Label()
         {
@@ -52,15 +54,14 @@ public class TrackInformationView : View
         //    Text = noteringenText
         //});
 
-        //var table = new TableView(listings)
-        //{
-        //    X = 0,
-        //    Y = 5,
-        //    Height = 7,
-        //    Width = width,
-        //    FullRowSelect = false,
-        //};
-
+        var table = new TableView(new ListingInformationSource(trackInformation))
+        {
+            X = 0,
+            Y = 5,
+            Height = Dim.Fill(),
+            Width = Dim.Fill(),
+        };
+        this.Add(table);
 
 
 
@@ -85,3 +86,25 @@ public class TrackInformationView : View
 
 }
 
+public class ListingInformationSource : ITableSource
+{
+    private readonly SortedSet<ListingInformation> listings;
+    private readonly object[][] rowcolumn;
+
+    public ListingInformationSource(TrackDetails trackDetails)
+    {
+        this.listings = trackDetails.Listings;
+
+        this.rowcolumn = this.listings
+            .Select(x => new object[] { x.Edition, x.Position?.ToString() ?? "-" })
+            .ToArray();
+    }
+
+    public object this[int row, int col] => this.rowcolumn[row][col];
+
+    public string[] ColumnNames => ["Edition", "Position"];
+
+    public int Columns => this.ColumnNames.Length;
+
+    public int Rows => this.listings.Count;
+}

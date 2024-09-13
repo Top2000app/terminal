@@ -11,7 +11,7 @@ namespace Top2000.Apps.Teminal;
 public class MainWindow : Toplevel
 {
     private readonly IMediator mediator;
-    private readonly TrackInformationView view;
+    private readonly TrackInformationView trackInformationView;
 
     private readonly ObservableCollection<TrackListingItem> listings = [];
     private readonly ObservableCollection<TrackListingItem> groups = [];
@@ -23,7 +23,7 @@ public class MainWindow : Toplevel
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, int selectedYear)
     {
         this.mediator = mediator;
-        this.view = view;
+        this.trackInformationView = view;
         this.ColorScheme = Colors.ColorSchemes["Base"];
 
         var menu = new MenuBar
@@ -72,9 +72,8 @@ public class MainWindow : Toplevel
         {
             X = Pos.Right(this.ListingFrame),
             Y = Pos.Bottom(menu),
-            Width = Dim.Percent(71),
+            Width = Dim.Percent(70) - 10,
             Height = Dim.Fill(),
-            BorderStyle = LineStyle.None,
         };
 
         infoFrame.Add(view);
@@ -87,7 +86,7 @@ public class MainWindow : Toplevel
     {
         if (selectedItem.TrackId is not null)
         {
-            await this.view.LoadTrackInformationAsync(selectedItem.TrackId.Value);
+            await this.trackInformationView.LoadTrackInformationAsync(selectedItem.TrackId.Value);
         }
     }
 
