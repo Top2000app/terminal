@@ -52,7 +52,7 @@ public class TrackInformationView : View
         //    Text = noteringenText
         //});
 
-        var table = new TableView(new ListingInformationSource(trackInformation))
+        var table = new ListingInformationTableView(new ListingInformationSource(trackInformation))
         {
             X = 0,
             Y = 5,
@@ -100,9 +100,35 @@ public class TrackInformationView : View
 
 public class ListingInformationTableView : TableView
 {
+    public ListingInformationTableView(ListingInformationSource table) : base(table) { }
+
     protected override void RenderCell(Terminal.Gui.Attribute cellColor, string render, bool isPrimaryCell)
     {
-        return base.RenderCell(cellColor, render, isPrimaryCell);
+        int green = render.IndexOf("\uFC35", StringComparison.CurrentCultureIgnoreCase);
+        int yellow = render.IndexOf("\uF73A", StringComparison.CurrentCultureIgnoreCase);
+        int alsoYellow = render.IndexOf("\uF94F", StringComparison.CurrentCultureIgnoreCase);
+        int red = render.IndexOf("\uFC2C", StringComparison.CurrentCultureIgnoreCase);
+
+        for (var i = 0; i < render.Length; i++)
+        {
+            if (i == green)
+            {
+                Driver.SetAttribute(new(Terminal.Gui.Color.BrightGreen, cellColor.Background));
+            }
+
+            if (i == yellow || i == alsoYellow)
+            {
+                Driver.SetAttribute(new(Terminal.Gui.Color.BrightYellow, cellColor.Background));
+            }
+
+            if (i == red)
+            {
+                Driver.SetAttribute(new(Terminal.Gui.Color.BrightRed, cellColor.Background));
+            }
+
+            Driver.AddRune((Rune)render[i]);
+            Driver.SetAttribute(cellColor);
+        }
     }
 }
 
