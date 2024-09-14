@@ -22,8 +22,6 @@ public class TrackInformationView : View
     {
         var trackInformation = await this.mediator.Send(new TrackInformationRequest { TrackId = trackId });
 
-
-
         this.Add(new Label()
         {
             X = 0,
@@ -59,7 +57,21 @@ public class TrackInformationView : View
             X = 0,
             Y = 5,
             Height = Dim.Fill(),
-            Width = Dim.Fill(),
+            Width = 23,
+            FullRowSelect = true,
+            Style = new TableStyle
+            {
+                ShowHeaders = false,
+                ExpandLastColumn = false,
+                ShowHorizontalBottomline = false,
+                ShowVerticalCellLines = false,
+                ShowHorizontalScrollIndicators = false,
+                ShowHorizontalHeaderOverline = false,
+                AlwaysShowHeaders = false,
+                ShowHorizontalHeaderUnderline = false,
+                ShowVerticalHeaderLines = false,
+
+            }
         };
         this.Add(table);
 
@@ -86,6 +98,14 @@ public class TrackInformationView : View
 
 }
 
+public class ListingInformationTableView : TableView
+{
+    protected override void RenderCell(Terminal.Gui.Attribute cellColor, string render, bool isPrimaryCell)
+    {
+        return base.RenderCell(cellColor, render, isPrimaryCell);
+    }
+}
+
 public class ListingInformationSource : ITableSource
 {
     private readonly SortedSet<ListingInformation> listings;
@@ -96,13 +116,30 @@ public class ListingInformationSource : ITableSource
         this.listings = trackDetails.Listings;
 
         this.rowcolumn = this.listings
-            .Select(x => new object[] { x.Edition, x.Position?.ToString() ?? "-" })
+            .Select(x =>
+            {
+                var offset = x.Status switch
+                {
+                    ListingStatus.NotAvailable => "",
+                    ListingStatus.NotListed => "",
+                    ListingStatus.Increased => $"\uFC35 {Math.Abs(x.Offset!.Value)}",
+                    ListingStatus.New => "\uF73A",
+                    ListingStatus.Unchanged => "\uFA74",
+                    ListingStatus.Back => "\uF94F",
+                    ListingStatus.Decreased => $"\uFC2C {Math.Abs(x.Offset!.Value)}",
+                    _ => "\uFAAF"
+                };
+
+                return new object[] { x.Edition.ToString().PadRight(5, ' '), x.Position?.ToString().PadRight(5, ' ') ?? "-", offset };
+            })
             .ToArray();
     }
 
+
+
     public object this[int row, int col] => this.rowcolumn[row][col];
 
-    public string[] ColumnNames => ["Edition", "Position"];
+    public string[] ColumnNames => ["", "", ""];
 
     public int Columns => this.ColumnNames.Length;
 
