@@ -20,6 +20,7 @@ public class TrackInformationView : View
 
     public async Task LoadTrackInformationAsync(int trackId)
     {
+
         var trackInformation = await this.mediator.Send(new TrackInformationRequest { TrackId = trackId });
 
         var title = new Label()
@@ -37,13 +38,13 @@ public class TrackInformationView : View
             X = 0,
             Y = Pos.Bottom(title),
             Height = 1,
-            Width = trackInformation.Artist.Length,
+            Width = Dim.Fill(),
             Text = trackInformation.Artist,
         };
 
         var recordingYear = new Label
         {
-            X = Pos.Right(artist) + 1,
+            X = trackInformation.Artist.Length + 1,
             Y = Pos.Bottom(title),
             Height = 1,
             Width = 7,
