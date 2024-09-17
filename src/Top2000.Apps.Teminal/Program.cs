@@ -43,7 +43,7 @@ Application.Init();
 
 var trackInformationView = services.GetRequiredService<TrackInformationView>();
 
-Application.Run(new MainWindow(mediator, trackInformationView, listingsResults, editions.First().Year));
+Application.Run(new MainWindow(mediator, trackInformationView, listingsResults, editions));
 
 Console.Clear();
 Console.WriteLine(top2000Terminal);

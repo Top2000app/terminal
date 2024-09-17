@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using Terminal.Gui;
 
@@ -7,13 +6,12 @@ namespace Top2000.Apps.Teminal.Views.ListingView;
 
 public class Top2000ListingListWrapper : IListDataSource
 {
-    private readonly ObservableCollection<TrackListingItem> source;
+    private readonly List<TrackListingItem> source;
 
-    public Top2000ListingListWrapper(ObservableCollection<TrackListingItem> source)
+    public Top2000ListingListWrapper(List<TrackListingItem> source)
     {
         this.source = source;
         this.Count = source.Count;
-        source.CollectionChanged += this.SourceCollectionChanged;
         this.Length = this.GetMaxLengthItem();
         CollectionChanged += this.SourceCollectionChanged;
     }
@@ -76,8 +74,6 @@ public class Top2000ListingListWrapper : IListDataSource
 
     protected virtual void Dispose(bool disposing)
     {
-        this.source.CollectionChanged -= this.SourceCollectionChanged;
-        CollectionChanged -= this.SourceCollectionChanged;
     }
 
     public bool IsMarked(int item)

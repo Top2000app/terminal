@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using MediatR;
+﻿using MediatR;
 using Terminal.Gui;
 using Top2000.Apps.Teminal.Views;
 using Top2000.Apps.Teminal.Views.ListingView;
@@ -12,18 +11,21 @@ public class MainWindow : Toplevel
 {
     private readonly IMediator mediator;
     private readonly TrackInformationView trackInformationView;
-
-    private readonly ObservableCollection<TrackListingItem> listings = [];
-    private readonly ObservableCollection<TrackListingItem> groups = [];
+    private readonly SortedSet<Edition> editions;
 
     public FrameView ListingFrame { get; }
+    public Top2000ListingListView ListingListView { get; }
 
-    private int? selectedYear = null;
+    private readonly int? selectedYear = null;
+    private TableView selectedEditionList;
+    private EditionsDataSource editionDataSource;
 
-    public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, int selectedYear)
+    public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
         this.mediator = mediator;
         this.trackInformationView = view;
+        this.editions = editions;
+        this.selectedYear = editions.First().Year;
         this.ColorScheme = Colors.ColorSchemes["Base"];
 
         var menu = new MenuBar
@@ -31,19 +33,18 @@ public class MainWindow : Toplevel
             Menus =
             [
                 new MenuBarItem("_File", new MenuItem[] {
+                    new("_Selecteer Editie", "", this.ShowSelectedEdition ),
                     new("_Quit", "", () => {
                         Application.RequestStop ();
                     })
                 }),
                 new MenuBarItem("_Help", new MenuItem[] {
-                    new("_About", "", async () => {
-                        await this.LoadItAsync();
+                    new("_About", "", () => {
                     })
                 }),
             ]
         };
 
-        this.ShowListings(trackListings);
 
         this.ListingFrame = new()
         {
@@ -52,10 +53,10 @@ public class MainWindow : Toplevel
             Width = Dim.Percent(39),
             Height = Dim.Fill(),
             CanFocus = true,
-            Title = selectedYear.ToString()
+            Title = this.selectedYear.ToString()
         };
 
-        this.ListingFrame.Add(new Top2000ListingListView
+        this.ListingListView = new()
         {
             X = 0,
             Y = 0,
@@ -63,11 +64,12 @@ public class MainWindow : Toplevel
             Height = Dim.Fill(),
             Width = Dim.Fill(),
             OnOpenTrackAsync = this.HandleOpenTrackAsync,
-            Source = new Top2000ListingListWrapper(this.listings),
-            Top2000Source = new Top2000ListingListWrapper(this.listings),
-            Top2000GroupedSource = new Top2000ListingListWrapper(this.groups),
-        });
+            Source = new Top2000ListingListWrapper([]),
+            Top2000Source = new Top2000ListingListWrapper([]),
+            Top2000GroupedSource = new Top2000ListingListWrapper([]),
+        };
 
+        this.ListingFrame.Add(this.ListingListView);
         var infoFrame = new FrameView()
         {
             X = Pos.Right(this.ListingFrame),
@@ -77,10 +79,73 @@ public class MainWindow : Toplevel
         };
 
         infoFrame.Add(view);
-
         this.Add(menu, this.ListingFrame, infoFrame);
+        this.ShowListings(trackListings);
+
     }
 
+    private void ShowSelectedEdition()
+    {
+        this.editionDataSource = new EditionsDataSource(this.editions, this.selectedYear!.Value);
+
+        var okButton = new Button { Text = "_Show" };
+        okButton.Accept += (s, e) =>
+        {
+            Application.RequestStop();
+        };
+
+        var cancelButton = new Button { Text = "_Cancel" };
+        cancelButton.Accept += (s, e) =>
+        {
+            Application.RequestStop();
+        };
+
+        Dialog dialog = new()
+        {
+            Title = "Selecteer editie",
+            Width = 72,
+            Height = this.editionDataSource.Rows * 2,
+            Buttons = [okButton, cancelButton],
+            ButtonAlignment = Alignment.Center
+        };
+
+        this.selectedEditionList = new TableView(this.editionDataSource)
+        {
+            X = Pos.Center(),
+            Y = Pos.Center(),
+            Height = this.editionDataSource.Rows,
+            Width = 36,
+            Style = new TableStyle
+            {
+                ShowHorizontalScrollIndicators = false,
+                ShowHorizontalBottomline = false,
+                ShowHeaders = false,
+                ExpandLastColumn = false,
+                ShowHorizontalHeaderOverline = false,
+                ShowVerticalHeaderLines = false,
+                ShowHorizontalHeaderUnderline = false,
+                ShowVerticalCellLines = false,
+            }
+        };
+
+        this.selectedEditionList.SetSelection(this.editionDataSource.SelectedRowColumn.Item2, this.editionDataSource.SelectedRowColumn.Item1, extendExistingSelection: false);
+
+        dialog.Add(this.selectedEditionList);
+
+        dialog.Closed += this.Dialog_Closed;
+
+        Application.Run(dialog);
+    }
+
+    private async void Dialog_Closed(object? sender, ToplevelEventArgs e)
+    {
+        var xx = this.editionDataSource[this.selectedEditionList.SelectedRow, this.selectedEditionList.SelectedColumn]?.ToString();
+
+        if (xx is not null)
+        {
+            await this.LoadItAsync(int.Parse(xx));
+        }
+    }
 
     private async Task HandleOpenTrackAsync(TrackListingItem selectedItem)
     {
@@ -90,11 +155,9 @@ public class MainWindow : Toplevel
         }
     }
 
-    public async Task LoadItAsync()
+    public async Task LoadItAsync(int year)
     {
-        var editions = await this.mediator.Send(new AllEditionsRequest()).ConfigureAwait(false);
-        this.selectedYear = editions.First().Year;
-        var listingsResults = await this.mediator.Send(new AllListingsOfEditionRequest { Year = this.selectedYear.Value });
+        var listingsResults = await this.mediator.Send(new AllListingsOfEditionRequest { Year = year });
 
         this.ShowListings(listingsResults);
     }
@@ -103,10 +166,10 @@ public class MainWindow : Toplevel
     {
         var groupsSet = new HashSet<string>();
 
-        this.listings.Clear();
+        var list = new List<TrackListingItem>();
         foreach (var item in trackListings)
         {
-            var group = Position(item, this.listings.Count);
+            var group = Position(item, trackListings.Count);
             if (groupsSet.Add(group))
             {
                 var trackListItem = new TrackListingItem
@@ -115,24 +178,27 @@ public class MainWindow : Toplevel
                     ItemType = TrackListingItem.Type.Group,
                 };
 
-                this.groups.Add(trackListItem);
-                this.listings.Add(trackListItem);
+                list.Add(trackListItem);
             }
 
-            this.listings.Add(new TrackListingItem
+            list.Add(new TrackListingItem
             {
                 ItemType = TrackListingItem.Type.Track,
                 Content = $"{item.Position,-6}{item.Title}",
                 TrackId = item.TrackId,
             });
 
-            this.listings.Add(new TrackListingItem
+            list.Add(new TrackListingItem
             {
                 ItemType = TrackListingItem.Type.Artist,
                 Content = $"      {item.Artist}",
                 TrackId = item.TrackId,
             });
         }
+
+        this.ListingListView.Source = new Top2000ListingListWrapper(list);
+        this.ListingListView.Top2000Source = new Top2000ListingListWrapper(list);
+        this.ListingListView.Top2000GroupedSource = new Top2000ListingListWrapper(list.Where(x => x.ItemType == TrackListingItem.Type.Group).ToList());
     }
 
     static string Position(TrackListing listing, int countOfItems)
@@ -155,4 +221,48 @@ public class MainWindow : Toplevel
 
         return $"{min} - {max}";
     }
+
+
+}
+
+public class EditionsDataSource : ITableSource
+{
+    private readonly string[][] items;
+
+    public EditionsDataSource(SortedSet<Edition> editions, int selectedYear)
+    {
+        this.Columns = 5;
+        this.Rows = editions.Count / this.Columns;
+
+        this.items = new string[this.Rows][];
+        for (var row = 0; row < this.Rows; row++)
+        {
+            this.items[row] = new string[this.Columns];
+        }
+
+        var index = 0;
+        foreach (var edition in editions.Reverse())
+        {
+            var row = this.Rows - (index / this.Columns) - 1;
+            var col = index % this.Columns;
+            this.items[row][col] = $" {edition.Year} ";
+
+            if (edition.Year == selectedYear)
+            {
+                this.SelectedRowColumn = new Tuple<int, int>(row, col);
+            }
+
+            index++;
+        }
+    }
+
+    public Tuple<int, int> SelectedRowColumn { get; }
+
+    public object this[int row, int col] => this.items[row][col];
+
+    public string[] ColumnNames => ["", "", "", "", ""];
+
+    public int Columns { get; }
+
+    public int Rows { get; }
 }
