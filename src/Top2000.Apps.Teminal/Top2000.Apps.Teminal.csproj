@@ -23,4 +23,8 @@
     <Using Include="Terminal.Gui.EnumExtensions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Views\SelectEdition\" />
+  </ItemGroup>
+
 </Project>

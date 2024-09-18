@@ -13,19 +13,15 @@ public class Top2000ListingListWrapper : IListDataSource
         this.source = source;
         this.Count = source.Count;
         this.Length = this.GetMaxLengthItem();
-        CollectionChanged += this.SourceCollectionChanged;
+
+        CollectionChanged += (_, __) => { };
     }
 
     public TrackListingItem? this[int index]
     {
         get
         {
-            if (index < 0)
-            {
-                return null;
-            }
-
-            if (index > this.source.Count - 1)
+            if (index < 0 || index > this.source.Count - 1)
             {
                 return null;
             }
@@ -57,14 +53,6 @@ public class Top2000ListingListWrapper : IListDataSource
     public bool SuspendCollectionChangedEvent { get; set; }
 
     public event NotifyCollectionChangedEventHandler CollectionChanged;
-
-    private void SourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        if (!this.SuspendCollectionChangedEvent)
-        {
-            CollectionChanged?.Invoke(sender, e);
-        }
-    }
 
     public void Dispose()
     {
@@ -114,7 +102,14 @@ public class Top2000ListingListWrapper : IListDataSource
         }
         else
         {
-            driver.SetAttribute(container.ColorScheme.Normal);
+            if (selectedItem.ItemType == TrackListingItem.Type.Group && !this.source.TrueForAll(x => x.ItemType == TrackListingItem.Type.Group))
+            {
+                driver.SetAttribute(new(Terminal.Gui.Color.BrightRed, container.ColorScheme.Normal.Background));
+            }
+            else
+            {
+                driver.SetAttribute(container.ColorScheme.Normal);
+            }
         }
 
         RenderUstr(driver, selectedItem.Content, width, start);

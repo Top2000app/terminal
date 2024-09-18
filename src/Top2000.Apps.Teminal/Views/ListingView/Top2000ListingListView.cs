@@ -11,7 +11,6 @@ public class Top2000ListingListView : ListView
         this.OpenSelectedItem += this.ListingOpenSelectedItem;
     }
 
-
     private ListViewState State { get; set; }
 
     private enum ListViewState
@@ -19,6 +18,7 @@ public class Top2000ListingListView : ListView
         Listing,
         Groups
     }
+
     public required Top2000ListingListWrapper Top2000GroupedSource
     {
         get;
@@ -70,7 +70,14 @@ public class Top2000ListingListView : ListView
 
     private bool? CustomMoveDown()
     {
-        var item = this.Source.ToList()[this.SelectedItem + 1] as TrackListingItem;
+        var index = this.SelectedItem + 1;
+
+        if (index > this.Source.ToList().Count - 1)
+        {
+            return false;
+        }
+
+        var item = this.Source.ToList()[index] as TrackListingItem;
         this.MoveDown();
 
         if (item is not null && item.ItemType != TrackListingItem.Type.Group)
@@ -83,6 +90,12 @@ public class Top2000ListingListView : ListView
 
     private bool? CustomMoveUp()
     {
+        var index = this.SelectedItem - 1;
+        if (index < 0)
+        {
+            return false;
+        }
+
         var item = this.Source.ToList()[this.SelectedItem - 1] as TrackListingItem;
         this.MoveUp();
 

@@ -11,22 +11,37 @@ public class MainWindow : Toplevel
 {
     private readonly IMediator mediator;
     private readonly TrackInformationView trackInformationView;
+    private HashSet<TrackListing> trackListings;
     private readonly SortedSet<Edition> editions;
 
     public FrameView ListingFrame { get; }
     public Top2000ListingListView ListingListView { get; }
 
-    private readonly int? selectedYear = null;
     private TableView selectedEditionList;
     private EditionsDataSource editionDataSource;
+    private Edition selectedEdition;
+    private readonly MenuItem showByPosition;
+    private readonly MenuItem showByDate;
 
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
         this.mediator = mediator;
         this.trackInformationView = view;
+        this.trackListings = trackListings;
         this.editions = editions;
-        this.selectedYear = editions.First().Year;
         this.ColorScheme = Colors.ColorSchemes["Base"];
+
+        this.showByPosition = new("_Show by position", "", () => this.ShowListingsByPosition(), canExecute: () => this.SelectedEdition.HasPlayDateAndTime)
+        {
+            CheckType = MenuItemCheckStyle.Radio,
+            Checked = true,
+        };
+
+        this.showByDate = new("_Show by date", "", () => this.ShowByDate(), canExecute: () => this.SelectedEdition.HasPlayDateAndTime)
+        {
+            CheckType = MenuItemCheckStyle.Radio,
+            Checked = false,
+        };
 
         var menu = new MenuBar
         {
@@ -34,13 +49,15 @@ public class MainWindow : Toplevel
             [
                 new MenuBarItem("_File", new MenuItem[] {
                     new("_Selecteer Editie", "", this.ShowSelectedEdition ),
-                    new("_Quit", "", () => {
-                        Application.RequestStop ();
-                    })
+                    null,
+                    new("_Quit", "", () => { Application.RequestStop (); })
+                }),
+                new MenuBarItem("_View", new MenuItem[] {
+                    this.showByPosition,
+                    this.showByDate
                 }),
                 new MenuBarItem("_Help", new MenuItem[] {
-                    new("_About", "", () => {
-                    })
+                    new("_About", "", () => {})
                 }),
             ]
         };
@@ -53,8 +70,11 @@ public class MainWindow : Toplevel
             Width = Dim.Percent(39),
             Height = Dim.Fill(),
             CanFocus = true,
-            Title = this.selectedYear.ToString()
+            Title = editions.First().Year.ToString()
         };
+
+        this.SelectedEdition = editions.First();
+
 
         this.ListingListView = new()
         {
@@ -80,13 +100,55 @@ public class MainWindow : Toplevel
 
         infoFrame.Add(view);
         this.Add(menu, this.ListingFrame, infoFrame);
-        this.ShowListings(trackListings);
+        this.ShowListingsByPosition();
 
+    }
+
+    private void ShowByDate()
+    {
+        this.showByPosition.Checked = false;
+        this.showByDate.Checked = true;
+
+        var groupsSet = new HashSet<string>();
+
+        var list = new List<TrackListingItem>();
+        foreach (var item in this.trackListings.Reverse())
+        {
+            var group = PositionDateTime(item);
+            if (groupsSet.Add(group))
+            {
+                var trackListItem = new TrackListingItem
+                {
+                    Content = group,
+                    ItemType = TrackListingItem.Type.Group,
+                };
+
+                list.Add(trackListItem);
+            }
+
+            list.Add(new TrackListingItem
+            {
+                ItemType = TrackListingItem.Type.Track,
+                Content = $"{item.Position,-6}{item.Title}",
+                TrackId = item.TrackId,
+            });
+
+            list.Add(new TrackListingItem
+            {
+                ItemType = TrackListingItem.Type.Artist,
+                Content = $"      {item.Artist}",
+                TrackId = item.TrackId,
+            });
+        }
+
+        this.ListingListView.Source = new Top2000ListingListWrapper(list);
+        this.ListingListView.Top2000Source = new Top2000ListingListWrapper(list);
+        this.ListingListView.Top2000GroupedSource = new Top2000ListingListWrapper(list.Where(x => x.ItemType == TrackListingItem.Type.Group).ToList());
     }
 
     private void ShowSelectedEdition()
     {
-        this.editionDataSource = new EditionsDataSource(this.editions, this.selectedYear!.Value);
+        this.editionDataSource = new EditionsDataSource(this.editions, this.SelectedEdition.Year);
 
         var okButton = new Button { Text = "_Show" };
         okButton.Accept += (s, e) =>
@@ -139,11 +201,11 @@ public class MainWindow : Toplevel
 
     private async void Dialog_Closed(object? sender, ToplevelEventArgs e)
     {
-        var xx = this.editionDataSource[this.selectedEditionList.SelectedRow, this.selectedEditionList.SelectedColumn]?.ToString();
+        var result = this.editionDataSource[this.selectedEditionList.SelectedRow, this.selectedEditionList.SelectedColumn]?.ToString();
 
-        if (xx is not null)
+        if (result is not null)
         {
-            await this.LoadItAsync(int.Parse(xx));
+            await this.LoadItAsync(int.Parse(result));
         }
     }
 
@@ -157,19 +219,41 @@ public class MainWindow : Toplevel
 
     public async Task LoadItAsync(int year)
     {
-        var listingsResults = await this.mediator.Send(new AllListingsOfEditionRequest { Year = year });
+        this.SelectedEdition = this.editions.First(x => x.Year == year);
+        this.trackListings = await this.mediator.Send(new AllListingsOfEditionRequest { Year = this.SelectedEdition.Year });
 
-        this.ShowListings(listingsResults);
+        if (this.showByDate.Checked.GetValueOrDefault(false) && this.SelectedEdition.HasPlayDateAndTime)
+        {
+            this.ShowByDate();
+        }
+
+        if (!this.SelectedEdition.HasPlayDateAndTime || this.showByPosition.Checked.GetValueOrDefault(true))
+        {
+            this.ShowListingsByPosition();
+        }
     }
 
-    public void ShowListings(HashSet<TrackListing> trackListings)
+    public Edition SelectedEdition
     {
+        get { return this.selectedEdition; }
+        set
+        {
+            this.ListingFrame.Title = value.Year.ToString();
+            this.selectedEdition = value;
+        }
+    }
+
+    public void ShowListingsByPosition()
+    {
+        this.showByPosition.Checked = true;
+        this.showByDate.Checked = false;
+
         var groupsSet = new HashSet<string>();
 
         var list = new List<TrackListingItem>();
-        foreach (var item in trackListings)
+        foreach (var item in this.trackListings)
         {
-            var group = Position(item, trackListings.Count);
+            var group = PositionGroup(item, this.trackListings.Count);
             if (groupsSet.Add(group))
             {
                 var trackListItem = new TrackListingItem
@@ -201,7 +285,17 @@ public class MainWindow : Toplevel
         this.ListingListView.Top2000GroupedSource = new Top2000ListingListWrapper(list.Where(x => x.ItemType == TrackListingItem.Type.Group).ToList());
     }
 
-    static string Position(TrackListing listing, int countOfItems)
+    static string PositionDateTime(TrackListing listing)
+    {
+        var localTime = listing.PlayUtcDateAndTime.ToLocalTime();
+
+        var hour = localTime.Hour + 1;
+        var date = localTime.ToString("dddd dd MMM H");
+
+        return $"{date}:00 - {hour}:00";
+    }
+
+    static string PositionGroup(TrackListing listing, int countOfItems)
     {
         const int GroupSize = 100;
 
