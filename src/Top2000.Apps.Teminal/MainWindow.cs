@@ -2,6 +2,7 @@
 using Terminal.Gui;
 using Top2000.Apps.Teminal.Views;
 using Top2000.Apps.Teminal.Views.ListingView;
+using Top2000.Apps.Teminal.Views.SelectEdition;
 using Top2000.Features.AllEditions;
 using Top2000.Features.AllListingsOfEdition;
 
@@ -12,24 +13,18 @@ public class MainWindow : Toplevel
     private readonly IMediator mediator;
     private readonly TrackInformationView trackInformationView;
     private HashSet<TrackListing> trackListings;
-    private readonly SortedSet<Edition> editions;
-
-    public FrameView ListingFrame { get; }
-    public Top2000ListingListView ListingListView { get; }
-
-    private TableView selectedEditionList;
-    private EditionsDataSource editionDataSource;
-    private Edition selectedEdition;
     private readonly MenuItem showByPosition;
     private readonly MenuItem showByDate;
+    private readonly FrameView listingFrame;
+    private readonly SelectEditionDialog selectEditionDialog;
 
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
         this.mediator = mediator;
         this.trackInformationView = view;
         this.trackListings = trackListings;
-        this.editions = editions;
         this.ColorScheme = Colors.ColorSchemes["Base"];
+        this.SelectedEdition = editions.First();
 
         this.showByPosition = new("_Show by position", "", () => this.ShowListingsByPosition(), canExecute: () => this.SelectedEdition.HasPlayDateAndTime)
         {
@@ -43,12 +38,14 @@ public class MainWindow : Toplevel
             Checked = false,
         };
 
+        this.selectEditionDialog = new(editions);
+
         var menu = new MenuBar
         {
             Menus =
             [
                 new MenuBarItem("_File", new MenuItem[] {
-                    new("_Selecteer Editie", "", this.ShowSelectedEdition ),
+                    new("_Selecteer Editie", "", async () => await this.ShowSelectedEditionDialog() ),
                     null,
                     new("_Quit", "", () => { Application.RequestStop (); })
                 }),
@@ -63,7 +60,7 @@ public class MainWindow : Toplevel
         };
 
 
-        this.ListingFrame = new()
+        this.listingFrame = new()
         {
             X = 0,
             Y = Pos.Bottom(menu),
@@ -73,7 +70,6 @@ public class MainWindow : Toplevel
             Title = editions.First().Year.ToString()
         };
 
-        this.SelectedEdition = editions.First();
 
 
         this.ListingListView = new()
@@ -89,21 +85,23 @@ public class MainWindow : Toplevel
             Top2000GroupedSource = new Top2000ListingListWrapper([]),
         };
 
-        this.ListingFrame.Add(this.ListingListView);
+        this.listingFrame.Add(this.ListingListView);
         var infoFrame = new FrameView()
         {
-            X = Pos.Right(this.ListingFrame),
+            X = Pos.Right(this.listingFrame),
             Y = Pos.Bottom(menu),
             Width = Dim.Percent(70) - 10,
             Height = Dim.Fill(),
         };
 
         infoFrame.Add(view);
-        this.Add(menu, this.ListingFrame, infoFrame);
+        this.Add(menu, this.listingFrame, infoFrame);
         this.ShowListingsByPosition();
 
     }
 
+    public Top2000ListingListView ListingListView { get; }
+    public Edition SelectedEdition { get; set; }
     private void ShowByDate()
     {
         this.showByPosition.Checked = false;
@@ -146,66 +144,15 @@ public class MainWindow : Toplevel
         this.ListingListView.Top2000GroupedSource = new Top2000ListingListWrapper(list.Where(x => x.ItemType == TrackListingItem.Type.Group).ToList());
     }
 
-    private void ShowSelectedEdition()
+    private async Task ShowSelectedEditionDialog()
     {
-        this.editionDataSource = new EditionsDataSource(this.editions, this.SelectedEdition.Year);
+        var newEdition = await this.selectEditionDialog.ShowDialogAsync(this.SelectedEdition);
 
-        var okButton = new Button { Text = "_Show" };
-        okButton.Accept += (s, e) =>
+        if (newEdition != this.SelectedEdition)
         {
-            Application.RequestStop();
-        };
-
-        var cancelButton = new Button { Text = "_Cancel" };
-        cancelButton.Accept += (s, e) =>
-        {
-            Application.RequestStop();
-        };
-
-        Dialog dialog = new()
-        {
-            Title = "Selecteer editie",
-            Width = 72,
-            Height = this.editionDataSource.Rows * 2,
-            Buttons = [okButton, cancelButton],
-            ButtonAlignment = Alignment.Center
-        };
-
-        this.selectedEditionList = new TableView(this.editionDataSource)
-        {
-            X = Pos.Center(),
-            Y = Pos.Center(),
-            Height = this.editionDataSource.Rows,
-            Width = 36,
-            Style = new TableStyle
-            {
-                ShowHorizontalScrollIndicators = false,
-                ShowHorizontalBottomline = false,
-                ShowHeaders = false,
-                ExpandLastColumn = false,
-                ShowHorizontalHeaderOverline = false,
-                ShowVerticalHeaderLines = false,
-                ShowHorizontalHeaderUnderline = false,
-                ShowVerticalCellLines = false,
-            }
-        };
-
-        this.selectedEditionList.SetSelection(this.editionDataSource.SelectedRowColumn.Item2, this.editionDataSource.SelectedRowColumn.Item1, extendExistingSelection: false);
-
-        dialog.Add(this.selectedEditionList);
-
-        dialog.Closed += this.Dialog_Closed;
-
-        Application.Run(dialog);
-    }
-
-    private async void Dialog_Closed(object? sender, ToplevelEventArgs e)
-    {
-        var result = this.editionDataSource[this.selectedEditionList.SelectedRow, this.selectedEditionList.SelectedColumn]?.ToString();
-
-        if (result is not null)
-        {
-            await this.LoadItAsync(int.Parse(result));
+            this.SelectedEdition = newEdition;
+            this.listingFrame.Title = newEdition.Year.ToString();
+            await this.LoadEditionAsync();
         }
     }
 
@@ -217,9 +164,8 @@ public class MainWindow : Toplevel
         }
     }
 
-    public async Task LoadItAsync(int year)
+    public async Task LoadEditionAsync()
     {
-        this.SelectedEdition = this.editions.First(x => x.Year == year);
         this.trackListings = await this.mediator.Send(new AllListingsOfEditionRequest { Year = this.SelectedEdition.Year });
 
         if (this.showByDate.Checked.GetValueOrDefault(false) && this.SelectedEdition.HasPlayDateAndTime)
@@ -230,16 +176,6 @@ public class MainWindow : Toplevel
         if (!this.SelectedEdition.HasPlayDateAndTime || this.showByPosition.Checked.GetValueOrDefault(true))
         {
             this.ShowListingsByPosition();
-        }
-    }
-
-    public Edition SelectedEdition
-    {
-        get { return this.selectedEdition; }
-        set
-        {
-            this.ListingFrame.Title = value.Year.ToString();
-            this.selectedEdition = value;
         }
     }
 
@@ -315,48 +251,5 @@ public class MainWindow : Toplevel
 
         return $"{min} - {max}";
     }
-
-
 }
 
-public class EditionsDataSource : ITableSource
-{
-    private readonly string[][] items;
-
-    public EditionsDataSource(SortedSet<Edition> editions, int selectedYear)
-    {
-        this.Columns = 5;
-        this.Rows = editions.Count / this.Columns;
-
-        this.items = new string[this.Rows][];
-        for (var row = 0; row < this.Rows; row++)
-        {
-            this.items[row] = new string[this.Columns];
-        }
-
-        var index = 0;
-        foreach (var edition in editions.Reverse())
-        {
-            var row = this.Rows - (index / this.Columns) - 1;
-            var col = index % this.Columns;
-            this.items[row][col] = $" {edition.Year} ";
-
-            if (edition.Year == selectedYear)
-            {
-                this.SelectedRowColumn = new Tuple<int, int>(row, col);
-            }
-
-            index++;
-        }
-    }
-
-    public Tuple<int, int> SelectedRowColumn { get; }
-
-    public object this[int row, int col] => this.items[row][col];
-
-    public string[] ColumnNames => ["", "", "", "", ""];
-
-    public int Columns { get; }
-
-    public int Rows { get; }
-}
