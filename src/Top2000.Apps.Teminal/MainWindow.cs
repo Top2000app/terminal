@@ -17,7 +17,6 @@ public class MainWindow : Toplevel
     private readonly MenuItem showByDate;
     private readonly FrameView listingFrame;
     private readonly SelectEditionDialog selectEditionDialog;
-
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
         this.mediator = mediator;
@@ -80,9 +79,6 @@ public class MainWindow : Toplevel
             Height = Dim.Fill(),
             Width = Dim.Fill(),
             OnOpenTrackAsync = this.HandleOpenTrackAsync,
-            Source = new Top2000ListingListWrapper([]),
-            Top2000Source = new Top2000ListingListWrapper([]),
-            Top2000GroupedSource = new Top2000ListingListWrapper([]),
         };
 
         this.listingFrame.Add(this.ListingListView);
@@ -107,41 +103,20 @@ public class MainWindow : Toplevel
         this.showByPosition.Checked = false;
         this.showByDate.Checked = true;
 
-        var groupsSet = new HashSet<string>();
-
-        var list = new List<TrackListingItem>();
-        foreach (var item in this.trackListings.Reverse())
-        {
-            var group = PositionDateTime(item);
-            if (groupsSet.Add(group))
-            {
-                var trackListItem = new TrackListingItem
-                {
-                    Content = group,
-                    ItemType = TrackListingItem.Type.Group,
-                };
-
-                list.Add(trackListItem);
-            }
-
-            list.Add(new TrackListingItem
-            {
-                ItemType = TrackListingItem.Type.Track,
-                Content = $"{item.Position,-6}{item.Title}",
-                TrackId = item.TrackId,
-            });
-
-            list.Add(new TrackListingItem
-            {
-                ItemType = TrackListingItem.Type.Artist,
-                Content = $"      {item.Artist}",
-                TrackId = item.TrackId,
-            });
-        }
+        var list = this.trackListings.Reverse()
+            .GroupBy(PositionDateTime)
+            .Select(group =>
+                new Grouping(
+                    new ListingItemGroup(group.Key),
+                    group.SelectMany(track => new List<ListingItem> {
+                        new(track.TrackId, $"{track.Position,-6}{track.Title}"),
+                        new(track.TrackId, $"      {track.Artist}")
+                        })
+                    )
+                )
+            .ToList();
 
         this.ListingListView.Source = new Top2000ListingListWrapper(list);
-        this.ListingListView.Top2000Source = new Top2000ListingListWrapper(list);
-        this.ListingListView.Top2000GroupedSource = new Top2000ListingListWrapper(list.Where(x => x.ItemType == TrackListingItem.Type.Group).ToList());
     }
 
     private async Task ShowSelectedEditionDialog()
@@ -156,11 +131,11 @@ public class MainWindow : Toplevel
         }
     }
 
-    private async Task HandleOpenTrackAsync(TrackListingItem selectedItem)
+    private async Task HandleOpenTrackAsync(ListingItem selectedItem)
     {
-        if (selectedItem.TrackId is not null)
+        if (selectedItem.Id is not null)
         {
-            await this.trackInformationView.LoadTrackInformationAsync(selectedItem.TrackId.Value);
+            await this.trackInformationView.LoadTrackInformationAsync(selectedItem.Id.Value);
         }
     }
 
@@ -184,41 +159,23 @@ public class MainWindow : Toplevel
         this.showByPosition.Checked = true;
         this.showByDate.Checked = false;
 
-        var groupsSet = new HashSet<string>();
-
-        var list = new List<TrackListingItem>();
-        foreach (var item in this.trackListings)
-        {
-            var group = PositionGroup(item, this.trackListings.Count);
-            if (groupsSet.Add(group))
-            {
-                var trackListItem = new TrackListingItem
-                {
-                    Content = group,
-                    ItemType = TrackListingItem.Type.Group,
-                };
-
-                list.Add(trackListItem);
-            }
-
-            list.Add(new TrackListingItem
-            {
-                ItemType = TrackListingItem.Type.Track,
-                Content = $"{item.Position,-6}{item.Title}",
-                TrackId = item.TrackId,
-            });
-
-            list.Add(new TrackListingItem
-            {
-                ItemType = TrackListingItem.Type.Artist,
-                Content = $"      {item.Artist}",
-                TrackId = item.TrackId,
-            });
-        }
+        var list = this.trackListings
+            .GroupByPosition()
+            .Select(group =>
+                new Grouping(
+                    new ListingItemGroup(group.Key),
+                    group.SelectMany(track => new List<ListingItem> {
+                                new(track.TrackId, $"{track.Position,-6}{track.Title}"),
+                                new(track.TrackId, $"      {track.Artist}")
+                        })
+                    )
+                )
+            .ToList();
 
         this.ListingListView.Source = new Top2000ListingListWrapper(list);
-        this.ListingListView.Top2000Source = new Top2000ListingListWrapper(list);
-        this.ListingListView.Top2000GroupedSource = new Top2000ListingListWrapper(list.Where(x => x.ItemType == TrackListingItem.Type.Group).ToList());
+
+
+        this.ListingListView.Source = new Top2000ListingListWrapper(list);
     }
 
     static string PositionDateTime(TrackListing listing)
@@ -231,25 +188,25 @@ public class MainWindow : Toplevel
         return $"{date}:00 - {hour}:00";
     }
 
-    static string PositionGroup(TrackListing listing, int countOfItems)
-    {
-        const int GroupSize = 100;
+    //static string PositionGroup(TrackListing listing, int countOfItems)
+    //{
+    //    const int GroupSize = 100;
 
-        if (listing.Position < 100) return "1 - 100";
+    //    if (listing.Position < 100) return "1 - 100";
 
-        if (countOfItems > 2000)
-        {
-            if (listing.Position >= 2400) return "2400 - 2500";
-        }
-        else
-        {
-            if (listing.Position >= 1900) return "1900 - 2000";
-        }
+    //    if (countOfItems > 2000)
+    //    {
+    //        if (listing.Position >= 2400) return "2400 - 2500";
+    //    }
+    //    else
+    //    {
+    //        if (listing.Position >= 1900) return "1900 - 2000";
+    //    }
 
-        var min = listing.Position / GroupSize * GroupSize;
-        var max = min + GroupSize;
+    //    var min = listing.Position / GroupSize * GroupSize;
+    //    var max = min + GroupSize;
 
-        return $"{min} - {max}";
-    }
+    //    return $"{min} - {max}";
+    //}
 }
 

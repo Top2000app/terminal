@@ -9,6 +9,8 @@ public class Top2000ListingListView : ListView
         this.AddCommand(Command.LineDown, () => this.CustomMoveDown());
         this.AddCommand(Command.LineUp, () => this.CustomMoveUp());
         this.OpenSelectedItem += this.ListingOpenSelectedItem;
+        Top2000Source = new Top2000ListingListWrapper(new List<ListingItem>());
+        Top2000GroupedSource = new Top2000ListingListWrapper(new List<ListingItem>());
     }
 
     private ListViewState State { get; set; }
@@ -19,27 +21,41 @@ public class Top2000ListingListView : ListView
         Groups
     }
 
-    public required Top2000ListingListWrapper Top2000GroupedSource
+    private Top2000ListingListWrapper Top2000GroupedSource
     {
         get;
         set;
     }
 
-    public required Top2000ListingListWrapper Top2000Source
+    private Top2000ListingListWrapper Top2000Source
     {
         get;
         set;
     }
 
-    public required Func<TrackListingItem, Task> OnOpenTrackAsync { get; init; }
+    public new virtual Top2000ListingListWrapper Source
+    {
+        get
+        {
+            return Top2000Source;
+        }
+        set
+        {
+            base.Source = value;
+            Top2000Source = value;
+            Top2000GroupedSource = new Top2000ListingListWrapper(value.Groups.ToList());
+        }
+    }
+
+    public required Func<ListingItem, Task> OnOpenTrackAsync { get; init; }
 
     private async void ListingOpenSelectedItem(object? sender, ListViewItemEventArgs e)
     {
-        var selectedItem = (TrackListingItem)e.Value;
+        var selectedItem = (ListingItem)e.Value;
 
-        if (selectedItem.ItemType == TrackListingItem.Type.Group)
+        if (selectedItem is ListingItemGroup group)
         {
-            this.HandleOpenGroup(selectedItem);
+            this.HandleOpenGroup(group);
         }
         else
         {
@@ -47,13 +63,13 @@ public class Top2000ListingListView : ListView
         }
     }
 
-    private void HandleOpenGroup(TrackListingItem selectedItem)
+    private void HandleOpenGroup(ListingItemGroup selectedItem)
     {
         if (this.State == ListViewState.Groups)
         {
             this.State = ListViewState.Listing;
 
-            this.Source = this.Top2000Source;
+            base.Source = this.Top2000Source;
 
             var rows = this.Top2000Source.ToList().IndexOf(selectedItem);
 
@@ -64,7 +80,7 @@ public class Top2000ListingListView : ListView
         else
         {
             this.State = ListViewState.Groups;
-            this.Source = this.Top2000GroupedSource;
+            base.Source = this.Top2000GroupedSource;
         }
     }
 
@@ -72,15 +88,15 @@ public class Top2000ListingListView : ListView
     {
         var index = this.SelectedItem + 1;
 
-        if (index > this.Source.ToList().Count - 1)
+        if (index > this.Source.Count - 1)
         {
             return false;
         }
 
-        var item = this.Source.ToList()[index] as TrackListingItem;
         this.MoveDown();
 
-        if (item is not null && item.ItemType != TrackListingItem.Type.Group)
+        var item = this.Source[index];
+        if (item is not null && item is not ListingItemGroup)
         {
             this.MoveDown();
         }
@@ -96,10 +112,10 @@ public class Top2000ListingListView : ListView
             return false;
         }
 
-        var item = this.Source.ToList()[this.SelectedItem - 1] as TrackListingItem;
         this.MoveUp();
 
-        if (item is not null && item.ItemType != TrackListingItem.Type.Group)
+        var item = this.Source[this.SelectedItem - 1];
+        if (item is not null && item is not ListingItemGroup)
         {
             this.MoveUp();
         }

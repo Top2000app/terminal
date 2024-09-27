@@ -4,20 +4,89 @@ using Terminal.Gui;
 
 namespace Top2000.Apps.Teminal.Views.ListingView;
 
+public sealed class Grouping : IGrouping<ListingItemGroup, ListingItem>
+{
+    private readonly ListingItemGroup _key;
+    private readonly IEnumerable<ListingItem> _items;
+
+    public Grouping(ListingItemGroup key, IEnumerable<ListingItem> items)
+    {
+        _key = key;
+        _items = items;
+    }
+
+    public ListingItemGroup Key => _key;
+
+    public IEnumerator<ListingItem> GetEnumerator() => _items.GetEnumerator();
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _items.GetEnumerator();
+}
+
+
+public class ListingItem
+{
+    protected ListingItem(string content)
+    {
+        this.Content = content;
+    }
+
+    public ListingItem(int id, string content)
+    {
+        this.Id = id;
+        this.Content = content;
+    }
+
+    public int? Id { get; protected set; }
+    public string Content { get; protected set; }
+}
+
+public class ListingItemGroup : ListingItem
+{
+    public ListingItemGroup(string content) : base(content)
+    {
+        base.Id = null;
+    }
+}
+
 public class Top2000ListingListWrapper : IListDataSource
 {
-    private readonly List<TrackListingItem> source;
+    private readonly List<ListingItem> source;
 
-    public Top2000ListingListWrapper(List<TrackListingItem> source)
+
+    public Top2000ListingListWrapper(List<ListingItem> source)
     {
-        this.source = source;
+        this.IsGrouped = true;
+        this.source = new List<ListingItem>(source);
         this.Count = source.Count;
         this.Length = this.GetMaxLengthItem();
 
         CollectionChanged += (_, __) => { };
     }
 
-    public TrackListingItem? this[int index]
+    public Top2000ListingListWrapper(List<Grouping> groupedSource)
+    {
+        this.IsGrouped = true;
+        this.source = [];
+
+        foreach (var group in groupedSource)
+        {
+            source.Add(group.Key);
+            source.AddRange(group);
+        }
+
+        this.Count = source.Count;
+        this.Length = this.GetMaxLengthItem();
+
+        CollectionChanged += (_, __) => { };
+    }
+
+    public bool IsGrouped
+    {
+        get;
+    }
+
+
+    public ListingItem? this[int index]
     {
         get
         {
@@ -69,40 +138,46 @@ public class Top2000ListingListWrapper : IListDataSource
         throw new NotSupportedException("Marking is not supported");
     }
 
-    public void Render(ListView container, ConsoleDriver driver, bool marked, int item, int col, int line, int width, int start = 0)
+    public List<int> IndexesOf(int id)
     {
-        var selectedItem = this.source[item];
-        var isSelected = item == container.SelectedItem;
+        var indexes = new List<int>();
 
-        container.Move(Math.Max(col - start, 0), line);
-
-        if (!isSelected)
+        for (int i = 0; i < source.Count; i++)
         {
-            var otherItem = item;
-
-            if (selectedItem.ItemType == TrackListingItem.Type.Artist)
+            if (source[i].Id == id)
             {
-                otherItem--; // look at the previous
-                isSelected = otherItem == container.SelectedItem;
-            }
-            else if (selectedItem.ItemType == TrackListingItem.Type.Track)
-            {
-                otherItem++; // look at the next
-                isSelected = otherItem == container.SelectedItem;
-            }
-            else
-            {
-                // it must be the group, not other selection
+                indexes.Add(i);
             }
         }
 
-        if (isSelected)
+        return indexes;
+    }
+
+
+    public void Render(ListView container, ConsoleDriver driver, bool selected, int item, int col, int line, int width, int start = 0)
+    {
+        var itemToRender = this.source[item];
+        var shouldSelectItem = item == container.SelectedItem;
+
+        container.Move(Math.Max(col - start, 0), line);
+
+        if (!shouldSelectItem)
+        {
+            var selectedItem = this[container.SelectedItem];
+            if (selectedItem is not null && selectedItem.Id.HasValue)
+            {
+                // all item with the same Id should be visible selected
+                shouldSelectItem = selectedItem.Id == itemToRender.Id;
+            }
+        }
+
+        if (shouldSelectItem)
         {
             driver.SetAttribute(container.ColorScheme.Focus);
         }
         else
         {
-            if (selectedItem.ItemType == TrackListingItem.Type.Group && !this.source.TrueForAll(x => x.ItemType == TrackListingItem.Type.Group))
+            if (IsGrouped && !itemToRender.Id.HasValue && !source.TrueForAll(x => x.Id.HasValue))
             {
                 driver.SetAttribute(new(Terminal.Gui.Color.BrightRed, container.ColorScheme.Normal.Background));
             }
@@ -112,7 +187,8 @@ public class Top2000ListingListWrapper : IListDataSource
             }
         }
 
-        RenderUstr(driver, selectedItem.Content, width, start);
+
+        RenderUstr(driver, itemToRender.Content, width, start);
     }
 
     public void SetMark(int item, bool value)
@@ -121,6 +197,14 @@ public class Top2000ListingListWrapper : IListDataSource
     }
 
     public IList ToList() => this.source.ToList();
+
+    public IEnumerable<ListingItem> Groups
+    {
+        get
+        {
+            return this.source.Where(x => x is ListingItemGroup);
+        }
+    }
 
     private static void RenderUstr(ConsoleDriver driver, string ustr, int width, int start = 0)
     {
