@@ -2,38 +2,36 @@ using System.Collections;
 using System.Collections.Specialized;
 using Terminal.Gui;
 
-namespace Top2000.Apps.Teminal.Views.ListingView;
+namespace Top2000.Apps.Teminal.Custom;
 
-public sealed class Grouping : IGrouping<ListingItemGroup, ListingItem>
+public sealed class MultilineListItemGrouping : IGrouping<ListingItemGroup, ListingItem>
 {
-    private readonly ListingItemGroup _key;
-    private readonly IEnumerable<ListingItem> _items;
+    private readonly IEnumerable<ListingItem> items;
 
-    public Grouping(ListingItemGroup key, IEnumerable<ListingItem> items)
+    public MultilineListItemGrouping(ListingItemGroup key, IEnumerable<ListingItem> items)
     {
-        _key = key;
-        _items = items;
+        Key = key;
+        this.items = items;
     }
 
-    public ListingItemGroup Key => _key;
+    public ListingItemGroup Key { get; }
 
-    public IEnumerator<ListingItem> GetEnumerator() => _items.GetEnumerator();
+    public IEnumerator<ListingItem> GetEnumerator() => items.GetEnumerator();
 
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _items.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => items.GetEnumerator();
 }
-
 
 public class ListingItem
 {
     protected ListingItem(string content)
     {
-        this.Content = content;
+        Content = content;
     }
 
     public ListingItem(int id, string content)
     {
-        this.Id = id;
-        this.Content = content;
+        Id = id;
+        Content = content;
     }
 
     public int? Id { get; protected set; }
@@ -44,29 +42,27 @@ public class ListingItemGroup : ListingItem
 {
     public ListingItemGroup(string content) : base(content)
     {
-        base.Id = null;
+        Id = null;
     }
 }
 
-public class Top2000ListingListWrapper : IListDataSource
+public class MultilineListViewWrapper : IListDataSource
 {
     private readonly List<ListingItem> source;
 
-
-    public Top2000ListingListWrapper(List<ListingItem> source)
+    public MultilineListViewWrapper(IEnumerable<ListingItem> source)
     {
-        this.IsGrouped = true;
-        this.source = new List<ListingItem>(source);
-        this.Count = source.Count;
-        this.Length = this.GetMaxLengthItem();
+        IsGrouped = true;
+        this.source = source.ToList();
+        Length = GetMaxLengthItem();
 
         CollectionChanged += (_, __) => { };
     }
 
-    public Top2000ListingListWrapper(List<Grouping> groupedSource)
+    public MultilineListViewWrapper(IEnumerable<MultilineListItemGrouping> groupedSource)
     {
-        this.IsGrouped = true;
-        this.source = [];
+        IsGrouped = true;
+        source = [];
 
         foreach (var group in groupedSource)
         {
@@ -74,8 +70,7 @@ public class Top2000ListingListWrapper : IListDataSource
             source.AddRange(group);
         }
 
-        this.Count = source.Count;
-        this.Length = this.GetMaxLengthItem();
+        Length = GetMaxLengthItem();
 
         CollectionChanged += (_, __) => { };
     }
@@ -90,12 +85,12 @@ public class Top2000ListingListWrapper : IListDataSource
     {
         get
         {
-            if (index < 0 || index > this.source.Count - 1)
+            if (index < 0 || index > source.Count - 1)
             {
                 return null;
             }
 
-            return this.source[index];
+            return source[index];
         }
     }
 
@@ -103,7 +98,7 @@ public class Top2000ListingListWrapper : IListDataSource
     {
         var maxLength = 0;
 
-        foreach (var item in this.source)
+        foreach (var item in source)
         {
             var l = item.Content.Length;
             if (l > maxLength)
@@ -115,7 +110,7 @@ public class Top2000ListingListWrapper : IListDataSource
         return maxLength;
     }
 
-    public int Count { get; }
+    public int Count => source.Count;
 
     public int Length { get; }
 
@@ -125,7 +120,7 @@ public class Top2000ListingListWrapper : IListDataSource
 
     public void Dispose()
     {
-        this.Dispose(true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
@@ -153,10 +148,9 @@ public class Top2000ListingListWrapper : IListDataSource
         return indexes;
     }
 
-
     public void Render(ListView container, ConsoleDriver driver, bool selected, int item, int col, int line, int width, int start = 0)
     {
-        var itemToRender = this.source[item];
+        var itemToRender = source[item];
         var shouldSelectItem = item == container.SelectedItem;
 
         container.Move(Math.Max(col - start, 0), line);
@@ -196,13 +190,13 @@ public class Top2000ListingListWrapper : IListDataSource
         throw new NotSupportedException("Marking items are not supported");
     }
 
-    public IList ToList() => this.source.ToList();
+    public IList ToList() => source.ToList();
 
     public IEnumerable<ListingItem> Groups
     {
         get
         {
-            return this.source.Where(x => x is ListingItemGroup);
+            return source.Where(x => x is ListingItemGroup);
         }
     }
 

@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Terminal.Gui;
+using Top2000.Apps.Teminal.Custom;
 using Top2000.Apps.Teminal.Views;
-using Top2000.Apps.Teminal.Views.ListingView;
 using Top2000.Apps.Teminal.Views.SelectEdition;
 using Top2000.Features.AllEditions;
 using Top2000.Features.AllListingsOfEdition;
@@ -58,7 +58,6 @@ public class MainWindow : Toplevel
             ]
         };
 
-
         this.listingFrame = new()
         {
             X = 0,
@@ -68,8 +67,6 @@ public class MainWindow : Toplevel
             CanFocus = true,
             Title = editions.First().Year.ToString()
         };
-
-
 
         this.ListingListView = new()
         {
@@ -96,28 +93,8 @@ public class MainWindow : Toplevel
 
     }
 
-    public Top2000ListingListView ListingListView { get; }
+    public MultilineListView ListingListView { get; }
     public Edition SelectedEdition { get; set; }
-    private void ShowByDate()
-    {
-        this.showByPosition.Checked = false;
-        this.showByDate.Checked = true;
-
-        var list = this.trackListings.Reverse()
-            .GroupBy(PositionDateTime)
-            .Select(group =>
-                new Grouping(
-                    new ListingItemGroup(group.Key),
-                    group.SelectMany(track => new List<ListingItem> {
-                        new(track.TrackId, $"{track.Position,-6}{track.Title}"),
-                        new(track.TrackId, $"      {track.Artist}")
-                        })
-                    )
-                )
-            .ToList();
-
-        this.ListingListView.Source = new Top2000ListingListWrapper(list);
-    }
 
     private async Task ShowSelectedEditionDialog()
     {
@@ -154,6 +131,27 @@ public class MainWindow : Toplevel
         }
     }
 
+    private void ShowByDate()
+    {
+        this.showByPosition.Checked = false;
+        this.showByDate.Checked = true;
+
+        var list = this.trackListings.Reverse()
+            .GroupByPlayUtcDateAndTime()
+            .Select(group =>
+                new MultilineListItemGrouping(
+                    new ListingItemGroup(PositionDateTime(group.Key)),
+                    group.SelectMany(track => new List<ListingItem> {
+                        new(track.TrackId, $"{track.Position,-6}{track.Title}"),
+                        new(track.TrackId, $"      {track.Artist}")
+                        })
+                    )
+                )
+            .ToList();
+
+        this.ListingListView.Source = new MultilineListViewWrapper(list);
+    }
+
     public void ShowListingsByPosition()
     {
         this.showByPosition.Checked = true;
@@ -162,7 +160,7 @@ public class MainWindow : Toplevel
         var list = this.trackListings
             .GroupByPosition()
             .Select(group =>
-                new Grouping(
+                new MultilineListItemGrouping(
                     new ListingItemGroup(group.Key),
                     group.SelectMany(track => new List<ListingItem> {
                                 new(track.TrackId, $"{track.Position,-6}{track.Title}"),
@@ -172,41 +170,17 @@ public class MainWindow : Toplevel
                 )
             .ToList();
 
-        this.ListingListView.Source = new Top2000ListingListWrapper(list);
-
-
-        this.ListingListView.Source = new Top2000ListingListWrapper(list);
+        this.ListingListView.Source = new MultilineListViewWrapper(list);
     }
 
-    static string PositionDateTime(TrackListing listing)
+    static string PositionDateTime(DateTime utcPlayTime)
     {
-        var localTime = listing.PlayUtcDateAndTime.ToLocalTime();
+        var localTime = utcPlayTime.ToLocalTime();
 
         var hour = localTime.Hour + 1;
         var date = localTime.ToString("dddd dd MMM H");
 
         return $"{date}:00 - {hour}:00";
     }
-
-    //static string PositionGroup(TrackListing listing, int countOfItems)
-    //{
-    //    const int GroupSize = 100;
-
-    //    if (listing.Position < 100) return "1 - 100";
-
-    //    if (countOfItems > 2000)
-    //    {
-    //        if (listing.Position >= 2400) return "2400 - 2500";
-    //    }
-    //    else
-    //    {
-    //        if (listing.Position >= 1900) return "1900 - 2000";
-    //    }
-
-    //    var min = listing.Position / GroupSize * GroupSize;
-    //    var max = min + GroupSize;
-
-    //    return $"{min} - {max}";
-    //}
 }
 
