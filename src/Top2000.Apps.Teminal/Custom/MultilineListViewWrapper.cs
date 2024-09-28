@@ -46,6 +46,11 @@ public class ListingItemGroup : ListingItem
     }
 }
 
+//public class ListingItemLine : ListingItem
+//{
+//    public ListingItemLine
+//}
+
 public class MultilineListViewWrapper : IListDataSource
 {
     private readonly List<ListingItem> source;
@@ -171,7 +176,7 @@ public class MultilineListViewWrapper : IListDataSource
         }
         else
         {
-            if (IsGrouped && !itemToRender.Id.HasValue && !source.TrueForAll(x => x.Id.HasValue))
+            if (IsGrouped && !itemToRender.Id.HasValue && !source.TrueForAll(x => !x.Id.HasValue))
             {
                 driver.SetAttribute(new(Terminal.Gui.Color.BrightRed, container.ColorScheme.Normal.Background));
             }

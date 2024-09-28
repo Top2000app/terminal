@@ -1,12 +1,12 @@
 ﻿using MediatR;
 using Terminal.Gui;
 using Top2000.Apps.Teminal.Custom;
-using Top2000.Apps.Teminal.Views;
 using Top2000.Apps.Teminal.Views.SelectEdition;
+using Top2000.Apps.Teminal.Views.TrackInformation;
 using Top2000.Features.AllEditions;
 using Top2000.Features.AllListingsOfEdition;
 
-namespace Top2000.Apps.Teminal;
+namespace Top2000.Apps.Teminal.Views;
 
 public class MainWindow : Toplevel
 {
@@ -20,37 +20,37 @@ public class MainWindow : Toplevel
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
         this.mediator = mediator;
-        this.trackInformationView = view;
+        trackInformationView = view;
         this.trackListings = trackListings;
-        this.ColorScheme = Colors.ColorSchemes["Base"];
-        this.SelectedEdition = editions.First();
+        ColorScheme = Colors.ColorSchemes["Base"];
+        SelectedEdition = editions.First();
 
-        this.showByPosition = new("_Show by position", "", () => this.ShowListingsByPosition(), canExecute: () => this.SelectedEdition.HasPlayDateAndTime)
+        showByPosition = new("_Show by position", "", () => ShowListingsByPosition(), canExecute: () => SelectedEdition.HasPlayDateAndTime)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = true,
         };
 
-        this.showByDate = new("_Show by date", "", () => this.ShowByDate(), canExecute: () => this.SelectedEdition.HasPlayDateAndTime)
+        showByDate = new("_Show by date", "", () => ShowByDate(), canExecute: () => SelectedEdition.HasPlayDateAndTime)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = false,
         };
 
-        this.selectEditionDialog = new(editions);
+        selectEditionDialog = new(editions);
 
         var menu = new MenuBar
         {
             Menus =
             [
                 new MenuBarItem("_File", new MenuItem[] {
-                    new("_Selecteer Editie", "", async () => await this.ShowSelectedEditionDialog() ),
+                    new("_Selecteer Editie", "", async () => await ShowSelectedEditionDialog() ),
                     null,
                     new("_Quit", "", () => { Application.RequestStop (); })
                 }),
                 new MenuBarItem("_View", new MenuItem[] {
-                    this.showByPosition,
-                    this.showByDate
+                    showByPosition,
+                    showByDate
                 }),
                 new MenuBarItem("_Help", new MenuItem[] {
                     new("_About", "", () => {})
@@ -58,7 +58,7 @@ public class MainWindow : Toplevel
             ]
         };
 
-        this.listingFrame = new()
+        listingFrame = new()
         {
             X = 0,
             Y = Pos.Bottom(menu),
@@ -68,28 +68,28 @@ public class MainWindow : Toplevel
             Title = editions.First().Year.ToString()
         };
 
-        this.ListingListView = new()
+        ListingListView = new()
         {
             X = 0,
             Y = 0,
             AllowsMultipleSelection = false,
             Height = Dim.Fill(),
             Width = Dim.Fill(),
-            OnOpenTrackAsync = this.HandleOpenTrackAsync,
+            OnOpenTrackAsync = HandleOpenTrackAsync,
         };
 
-        this.listingFrame.Add(this.ListingListView);
+        listingFrame.Add(ListingListView);
         var infoFrame = new FrameView()
         {
-            X = Pos.Right(this.listingFrame),
+            X = Pos.Right(listingFrame),
             Y = Pos.Bottom(menu),
             Width = Dim.Percent(70) - 10,
             Height = Dim.Fill(),
         };
 
         infoFrame.Add(view);
-        this.Add(menu, this.listingFrame, infoFrame);
-        this.ShowListingsByPosition();
+        Add(menu, listingFrame, infoFrame);
+        ShowListingsByPosition();
 
     }
 
@@ -98,13 +98,13 @@ public class MainWindow : Toplevel
 
     private async Task ShowSelectedEditionDialog()
     {
-        var newEdition = await this.selectEditionDialog.ShowDialogAsync(this.SelectedEdition);
+        var newEdition = await selectEditionDialog.ShowDialogAsync(SelectedEdition);
 
-        if (newEdition != this.SelectedEdition)
+        if (newEdition != SelectedEdition)
         {
-            this.SelectedEdition = newEdition;
-            this.listingFrame.Title = newEdition.Year.ToString();
-            await this.LoadEditionAsync();
+            SelectedEdition = newEdition;
+            listingFrame.Title = newEdition.Year.ToString();
+            await LoadEditionAsync();
         }
     }
 
@@ -112,31 +112,31 @@ public class MainWindow : Toplevel
     {
         if (selectedItem.Id is not null)
         {
-            await this.trackInformationView.LoadTrackInformationAsync(selectedItem.Id.Value);
+            await trackInformationView.LoadTrackInformationAsync(selectedItem.Id.Value);
         }
     }
 
     public async Task LoadEditionAsync()
     {
-        this.trackListings = await this.mediator.Send(new AllListingsOfEditionRequest { Year = this.SelectedEdition.Year });
+        trackListings = await mediator.Send(new AllListingsOfEditionRequest { Year = SelectedEdition.Year });
 
-        if (this.showByDate.Checked.GetValueOrDefault(false) && this.SelectedEdition.HasPlayDateAndTime)
+        if (showByDate.Checked.GetValueOrDefault(false) && SelectedEdition.HasPlayDateAndTime)
         {
-            this.ShowByDate();
+            ShowByDate();
         }
 
-        if (!this.SelectedEdition.HasPlayDateAndTime || this.showByPosition.Checked.GetValueOrDefault(true))
+        if (!SelectedEdition.HasPlayDateAndTime || showByPosition.Checked.GetValueOrDefault(true))
         {
-            this.ShowListingsByPosition();
+            ShowListingsByPosition();
         }
     }
 
     private void ShowByDate()
     {
-        this.showByPosition.Checked = false;
-        this.showByDate.Checked = true;
+        showByPosition.Checked = false;
+        showByDate.Checked = true;
 
-        var list = this.trackListings.Reverse()
+        var list = trackListings.Reverse()
             .GroupByPlayUtcDateAndTime()
             .Select(group =>
                 new MultilineListItemGrouping(
@@ -149,15 +149,15 @@ public class MainWindow : Toplevel
                 )
             .ToList();
 
-        this.ListingListView.Source = new MultilineListViewWrapper(list);
+        ListingListView.Source = new MultilineListViewWrapper(list);
     }
 
     public void ShowListingsByPosition()
     {
-        this.showByPosition.Checked = true;
-        this.showByDate.Checked = false;
+        showByPosition.Checked = true;
+        showByDate.Checked = false;
 
-        var list = this.trackListings
+        var list = trackListings
             .GroupByPosition()
             .Select(group =>
                 new MultilineListItemGrouping(
@@ -170,7 +170,7 @@ public class MainWindow : Toplevel
                 )
             .ToList();
 
-        this.ListingListView.Source = new MultilineListViewWrapper(list);
+        ListingListView.Source = new MultilineListViewWrapper(list);
     }
 
     static string PositionDateTime(DateTime utcPlayTime)

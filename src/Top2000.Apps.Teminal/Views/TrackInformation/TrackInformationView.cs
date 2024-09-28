@@ -2,7 +2,7 @@
 using Terminal.Gui;
 using Top2000.Features.TrackInformation;
 
-namespace Top2000.Apps.Teminal.Views;
+namespace Top2000.Apps.Teminal.Views.TrackInformation;
 
 public class TrackInformationView : View
 {
@@ -12,16 +12,16 @@ public class TrackInformationView : View
     {
         this.mediator = mediator;
 
-        this.X = 0;
-        this.Y = 0;
-        this.Height = Dim.Fill();
-        this.Width = Dim.Fill();
+        X = 0;
+        Y = 0;
+        Height = Dim.Fill();
+        Width = Dim.Fill();
     }
 
     public async Task LoadTrackInformationAsync(int trackId)
     {
 
-        var trackInformation = await this.mediator.Send(new TrackInformationRequest { TrackId = trackId });
+        var trackInformation = await mediator.Send(new TrackInformationRequest { TrackId = trackId });
 
         var title = new Label()
         {
@@ -48,11 +48,11 @@ public class TrackInformationView : View
             Y = Pos.Bottom(title),
             Height = 1,
             Width = 7,
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
             Text = $"({trackInformation.RecordedYear})",
         };
 
-        this.Add(title, artist, recordingYear);
+        Add(title, artist, recordingYear);
 
         var line = new LineView(Orientation.Horizontal)
         {
@@ -60,11 +60,11 @@ public class TrackInformationView : View
             Y = 3
         };
 
-        this.Add(line);
+        Add(line);
 
         var noteringenText = "Noteringen";
 
-        this.Add(new Label
+        Add(new Label
         {
             X = 5,
             Y = 3,
@@ -73,7 +73,7 @@ public class TrackInformationView : View
             Text = $"\u2528{noteringenText}\u2523"
         });
 
-        this.Add(new Label
+        Add(new Label
         {
             X = 25,
             Y = 3,
@@ -87,7 +87,7 @@ public class TrackInformationView : View
             X = 25,
             Y = 4,
         };
-        this.Add(lineDown);
+        Add(lineDown);
 
         var frame = new FrameView
         {
@@ -97,7 +97,7 @@ public class TrackInformationView : View
             Height = Dim.Fill(2),
             BorderStyle = LineStyle.None
         };
-        this.Add(frame);
+        Add(frame);
 
 
 
@@ -137,7 +137,7 @@ public class TrackInformationView : View
             Y = 3,
             Width = 5,
             Text = $"{trackInformation.Highest.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -146,7 +146,7 @@ public class TrackInformationView : View
             Y = 3,
             Width = 7,
             Text = $"({trackInformation.Highest.Edition})",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -155,7 +155,7 @@ public class TrackInformationView : View
             Y = 4,
             Width = 5,
             Text = $"{trackInformation.Lowest.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -164,7 +164,7 @@ public class TrackInformationView : View
             Y = 4,
             Width = 7,
             Text = $"({trackInformation.Lowest.Edition})",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -173,7 +173,7 @@ public class TrackInformationView : View
             Y = 5,
             Width = 5,
             Text = $"{trackInformation.First.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -182,7 +182,7 @@ public class TrackInformationView : View
             Y = 5,
             Width = 7,
             Text = $"({trackInformation.First.Edition})",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -191,7 +191,7 @@ public class TrackInformationView : View
             Y = 6,
             Width = 5,
             Text = $"{trackInformation.Latest.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -200,7 +200,7 @@ public class TrackInformationView : View
             Y = 6,
             Width = 7,
             Text = $"({trackInformation.Latest.Edition})",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -209,7 +209,7 @@ public class TrackInformationView : View
             Y = 7,
             Width = Dim.Fill(),
             Text = $"{trackInformation.Latest.LocalUtcDateAndTime}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, this.ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
         var table = new ListingInformationTableView(new ListingInformationSource(trackInformation))
@@ -234,9 +234,9 @@ public class TrackInformationView : View
 
             }
         };
-        this.Add(table);
+        Add(table);
 
-        this.SetNeedsDisplay();
+        SetNeedsDisplay();
     }
 
 }
@@ -282,9 +282,9 @@ public class ListingInformationSource : ITableSource
 
     public ListingInformationSource(TrackDetails trackDetails)
     {
-        this.listings = trackDetails.Listings;
+        listings = trackDetails.Listings;
 
-        this.rowcolumn = this.listings
+        rowcolumn = listings
             .Select(x =>
             {
                 var offset = x.Status switch
@@ -306,11 +306,11 @@ public class ListingInformationSource : ITableSource
 
 
 
-    public object this[int row, int col] => this.rowcolumn[row][col];
+    public object this[int row, int col] => rowcolumn[row][col];
 
     public string[] ColumnNames => ["", "", ""];
 
-    public int Columns => this.ColumnNames.Length;
+    public int Columns => ColumnNames.Length;
 
-    public int Rows => this.listings.Count;
+    public int Rows => listings.Count;
 }

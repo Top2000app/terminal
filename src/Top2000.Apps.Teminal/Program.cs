@@ -2,8 +2,8 @@
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Terminal.Gui;
-using Top2000.Apps.Teminal;
 using Top2000.Apps.Teminal.Views;
+using Top2000.Apps.Teminal.Views.TrackInformation;
 using Top2000.Data.ClientDatabase;
 using Top2000.Features.AllEditions;
 using Top2000.Features.AllListingsOfEdition;
