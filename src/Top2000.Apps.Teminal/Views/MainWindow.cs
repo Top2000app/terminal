@@ -25,13 +25,13 @@ public class MainWindow : Toplevel
         ColorScheme = Colors.ColorSchemes["Base"];
         SelectedEdition = editions.First();
 
-        showByPosition = new("_Show by position", "", () => ShowListingsByPosition(), canExecute: () => SelectedEdition.HasPlayDateAndTime)
+        showByPosition = new("_Show by position", "", ShowListingsByPosition, canExecute: () => SelectedEdition.HasPlayDateAndTime)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = true,
         };
 
-        showByDate = new("_Show by date", "", () => ShowByDate(), canExecute: () => SelectedEdition.HasPlayDateAndTime)
+        showByDate = new("_Show by date", "", ShowByDate, canExecute: () => SelectedEdition.HasPlayDateAndTime)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = false,

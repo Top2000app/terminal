@@ -75,9 +75,7 @@ public class MultilineListViewWrapper : IListDataSource
         CollectionChanged += (_, __) => { };
     }
 
-
-
-    public bool ShowGroupHeader { get; set; };
+    public bool ShowGroupHeader { get; set; }
 
     public bool IsGrouped
     {
