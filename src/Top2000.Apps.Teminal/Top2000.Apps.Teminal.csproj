@@ -10,18 +10,7 @@
     <Platforms>AnyCPU;x64;x86</Platforms>
     <AssemblyName>Top2000.Terminal</AssemblyName>
     <ApplicationIcon>Top2000.Terminal.ico</ApplicationIcon>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <Optimize>False</Optimize>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Optimize>False</Optimize>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-    <Optimize>False</Optimize>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,8 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="System.Drawing" />
-    <Using Include="System.Text" />
+    <Folder Include="Views\About\" />
   </ItemGroup>
 
 </Project>

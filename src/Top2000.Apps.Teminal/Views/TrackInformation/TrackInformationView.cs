@@ -1,6 +1,4 @@
-﻿using MediatR;
-using Terminal.Gui;
-using Top2000.Features.TrackInformation;
+﻿using Top2000.Features.TrackInformation;
 
 namespace Top2000.Apps.Teminal.Views.TrackInformation;
 

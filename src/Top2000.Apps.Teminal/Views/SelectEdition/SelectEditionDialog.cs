@@ -1,5 +1,4 @@
-﻿using Terminal.Gui;
-using Top2000.Features.AllEditions;
+﻿using Top2000.Features.AllEditions;
 
 namespace Top2000.Apps.Teminal.Views.SelectEdition;
 

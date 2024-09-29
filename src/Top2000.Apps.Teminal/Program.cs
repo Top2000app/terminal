@@ -1,7 +1,5 @@
 ﻿using Figgle;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using Terminal.Gui;
 using Top2000.Apps.Teminal.Views;
 using Top2000.Apps.Teminal.Views.TrackInformation;
 using Top2000.Data.ClientDatabase;

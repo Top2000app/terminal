@@ -1,6 +1,4 @@
-﻿using Terminal.Gui;
-
-namespace Top2000.Apps.Teminal.Custom;
+﻿namespace Top2000.Apps.Teminal.Custom;
 
 public class MultilineListView : ListView
 {

@@ -1,7 +1,3 @@
-using System.Collections;
-using System.Collections.Specialized;
-using Terminal.Gui;
-
 namespace Top2000.Apps.Teminal.Custom;
 
 public sealed class MultilineListItemGrouping : IGrouping<ListingItemGroup, ListingItem>

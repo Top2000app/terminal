@@ -1,6 +1,4 @@
-﻿using MediatR;
-using Terminal.Gui;
-using Top2000.Apps.Teminal.Custom;
+﻿using Top2000.Apps.Teminal.Custom;
 using Top2000.Apps.Teminal.Views.SelectEdition;
 using Top2000.Apps.Teminal.Views.TrackInformation;
 using Top2000.Features.AllEditions;
