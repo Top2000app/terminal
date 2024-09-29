@@ -75,7 +75,7 @@ public class TrackInformationView : View
 
         Add(new Label
         {
-            X = 25,
+            X = 23,
             Y = 3,
             Height = 1,
             Width = 1,
@@ -84,7 +84,7 @@ public class TrackInformationView : View
 
         var lineDown = new LineView(Orientation.Vertical)
         {
-            X = 25,
+            X = 23,
             Y = 4,
         };
         Add(lineDown);
