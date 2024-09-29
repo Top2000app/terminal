@@ -41,9 +41,10 @@ public class MultilineListView : ListView
         }
         set
         {
+            var groupId = 0;
             base.Source = value;
             OriginalSource = value;
-            GroupedSource = new MultilineListViewWrapper(value.Groups.ToList());
+            GroupedSource = new MultilineListViewWrapper(value.Groups.Select(x => new ListingItem(groupId++, x.Content)));
         }
     }
 
@@ -51,19 +52,17 @@ public class MultilineListView : ListView
 
     private async void ListingOpenSelectedItem(object? sender, ListViewItemEventArgs e)
     {
-        var selectedItem = (ListingItem)e.Value;
-
-        if (selectedItem is ListingItemGroup group)
+        if (State == ListViewState.Groups || e.Value is ListingItemGroup)
         {
-            HandleOpenGroup(group);
+            HandleOpenGroup((ListingItem)e.Value);
         }
         else
         {
-            await OnOpenTrackAsync(selectedItem);
+            await OnOpenTrackAsync((ListingItem)e.Value);
         }
     }
 
-    private void HandleOpenGroup(ListingItemGroup selectedItem)
+    private void HandleOpenGroup(ListingItem selectedItem)
     {
         if (State == ListViewState.Groups)
         {
@@ -71,7 +70,7 @@ public class MultilineListView : ListView
 
             base.Source = OriginalSource;
 
-            var rows = OriginalSource.ToList().IndexOf(selectedItem);
+            var rows = OriginalSource.FindIndexOf(selectedItem.Content);
 
             SelectedItem = rows + Viewport.Height - 1;
             EnsureSelectedItemVisible();

@@ -149,7 +149,11 @@ public class MainWindow : Toplevel
                 )
             .ToList();
 
-        ListingListView.Source = new MultilineListViewWrapper(list);
+        ListingListView.Source = new MultilineListViewWrapper(list)
+        {
+            GroupColour = Terminal.Gui.Color.BrightRed,
+            ShowGroupHeader = true,
+        };
     }
 
     public void ShowListingsByPosition()
@@ -170,7 +174,11 @@ public class MainWindow : Toplevel
                 )
             .ToList();
 
-        ListingListView.Source = new MultilineListViewWrapper(list);
+        ListingListView.Source = new MultilineListViewWrapper(list)
+        {
+            GroupColour = Terminal.Gui.Color.BrightRed,
+            ShowGroupHeader = true,
+        };
     }
 
     static string PositionDateTime(DateTime utcPlayTime)
