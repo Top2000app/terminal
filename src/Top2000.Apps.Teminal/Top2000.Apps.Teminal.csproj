@@ -24,8 +24,4 @@
     <PackageReference Include="Terminal.Gui" Version="2.0.0-v2-develop.2329" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Views\About\" />
-  </ItemGroup>
-
 </Project>

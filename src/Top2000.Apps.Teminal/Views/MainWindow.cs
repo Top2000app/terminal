@@ -1,4 +1,5 @@
 ﻿using Top2000.Apps.Teminal.Custom;
+using Top2000.Apps.Teminal.Views.About;
 using Top2000.Apps.Teminal.Views.SelectEdition;
 using Top2000.Apps.Teminal.Views.TrackInformation;
 using Top2000.Features.AllEditions;
@@ -51,7 +52,7 @@ public class MainWindow : Toplevel
                     showByDate
                 }),
                 new MenuBarItem("_Help", new MenuItem[] {
-                    new("_About", "", () => {})
+                    new("_About", "", async () => {await new AboutDialog().ShowDialogAsync(); })
                 }),
             ]
         };
