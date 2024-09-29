@@ -5,7 +5,28 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PublishSingleFile>true</PublishSingleFile>
+    <RuntimeIdentifiers>win-x86;win-x64;linux-x64</RuntimeIdentifiers>
+    <Platforms>AnyCPU;x64;x86</Platforms>
+    <AssemblyName>Top2000.Terminal</AssemblyName>
+    <ApplicationIcon>Top2000.Terminal.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Top2000.Terminal.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Figgle" Version="0.5.1" />
@@ -17,10 +38,6 @@
   <ItemGroup>
     <Using Include="System.Drawing" />
     <Using Include="System.Text" />
-    <Using Include="Terminal.Gui.ConfigurationManager">
-      <Static>True</Static>
-    </Using>
-    <Using Include="Terminal.Gui.EnumExtensions" />
   </ItemGroup>
 
 </Project>
