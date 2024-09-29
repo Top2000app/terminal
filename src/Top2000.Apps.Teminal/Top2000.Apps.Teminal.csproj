@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishSingleFile>true</PublishSingleFile>
+    <RuntimeIdentifiers>win-x86;win-x64;linux-x64</RuntimeIdentifiers>
+    <Platforms>AnyCPU;x64;x86</Platforms>
+    <AssemblyName>Top2000.Terminal</AssemblyName>
+    <ApplicationIcon>Top2000.Terminal.ico</ApplicationIcon>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Top2000.Terminal.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Figgle" Version="0.5.1" />
+    <PackageReference Include="RickNeeftDevelopment.Top2000App.Features" Version="1.1.0" />
+    <PackageReference Include="RickNeeftDevelopment.Top2000App.Features.SQLite" Version="1.1.0" />
+    <PackageReference Include="Terminal.Gui" Version="2.0.0-v2-develop.2329" />
+  </ItemGroup>
+
+</Project>
