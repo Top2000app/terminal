@@ -1,4 +1,5 @@
 ﻿using Top2000.Apps.Teminal.Custom;
+using Top2000.Apps.Teminal.Theme;
 using Top2000.Apps.Teminal.Views.About;
 using Top2000.Apps.Teminal.Views.SelectEdition;
 using Top2000.Apps.Teminal.Views.TrackInformation;
@@ -15,9 +16,14 @@ public class MainWindow : Toplevel
     private readonly MenuItem showByPosition;
     private readonly MenuItem showByDate;
     private readonly FrameView listingFrame;
+    private readonly Label SelectedEditionLabel;
     private readonly SelectEditionDialog selectEditionDialog;
+    private readonly ITheme theme;
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
+        var themes = new Themes();
+        theme = themes.DefaultTheme();
+
         this.mediator = mediator;
         trackInformationView = view;
         this.trackListings = trackListings;
@@ -54,7 +60,8 @@ public class MainWindow : Toplevel
                 new MenuBarItem("_Help", new MenuItem[] {
                     new("_About", "", async () => {await new AboutDialog().ShowDialogAsync(); })
                 }),
-            ]
+            ],
+            ColorScheme = theme.MenuBarColorScheme
         };
 
         listingFrame = new()
@@ -64,26 +71,40 @@ public class MainWindow : Toplevel
             Width = Dim.Percent(39),
             Height = Dim.Fill(),
             CanFocus = true,
-            Title = editions.First().Year.ToString()
+            ColorScheme = theme.ListViewColorScheme,
+            BorderStyle = LineStyle.None,
+        };
+
+        SelectedEditionLabel = new()
+        {
+            X = 0,
+            Y = 0,
+            Height = 1,
+            Width = Dim.Fill(),
+            Text = editions.First().Year.ToString(),
+            TextAlignment = Alignment.Center,
+            ColorScheme = theme.SelectedEditionLabelColorScheme,
         };
 
         ListingListView = new()
         {
             X = 0,
-            Y = 0,
+            Y = 1,
             AllowsMultipleSelection = false,
             Height = Dim.Fill(),
             Width = Dim.Fill(),
             OnOpenTrackAsync = HandleOpenTrackAsync,
         };
 
-        listingFrame.Add(ListingListView);
+        listingFrame.Add(SelectedEditionLabel, ListingListView);
         var infoFrame = new FrameView()
         {
             X = Pos.Right(listingFrame),
             Y = Pos.Bottom(menu),
             Width = Dim.Percent(70) - 10,
             Height = Dim.Fill(),
+            ColorScheme = theme.TrackInfoColorScheme,
+            BorderStyle = LineStyle.None,
         };
 
         infoFrame.Add(view);
@@ -102,7 +123,7 @@ public class MainWindow : Toplevel
         if (newEdition != SelectedEdition)
         {
             SelectedEdition = newEdition;
-            listingFrame.Title = newEdition.Year.ToString();
+            SelectedEditionLabel.Text = newEdition.Year.ToString();
             await LoadEditionAsync();
         }
     }
@@ -111,7 +132,7 @@ public class MainWindow : Toplevel
     {
         if (selectedItem.Id is not null)
         {
-            await trackInformationView.LoadTrackInformationAsync(selectedItem.Id.Value);
+            await trackInformationView.LoadTrackInformationAsync(selectedItem.Id.Value, theme);
         }
     }
 
@@ -135,25 +156,40 @@ public class MainWindow : Toplevel
         showByPosition.Checked = false;
         showByDate.Checked = true;
 
-        var list = trackListings.Reverse()
-            .GroupByPlayUtcDateAndTime()
-            .Select(group =>
-                new MultilineListItemGrouping(
-                    new ListingItemGroup(PositionDateTime(group.Key)),
-                    group.SelectMany(track => new List<ListingItem> {
-                        new(track.TrackId, $"{track.Position,-6}{track.Title}"),
-                        new(track.TrackId, $"      {track.Artist}")
-                        })
-                    )
-                )
-            .ToList();
+        var listings = trackListings.Reverse()
+            .GroupBy(LocalPlayDateAndTime);
 
-        ListingListView.Source = new MultilineListViewWrapper(list)
-        {
-            GroupColour = Terminal.Gui.Color.BrightRed,
-            ShowGroupHeader = true,
-        };
+        var dates = listings
+            .Select(x => x.Key)
+            .GroupBy(LocalPlayDate);
+
+        var list = listings.Select(group =>
+            new MultilineListItemGrouping(
+                new ListingItemGroup(PositionDateTime(group.Key)) { ForeColour = theme.Top2000Colour },
+                group.SelectMany(track => new List<ListingItem> {
+                    new(track.TrackId, $"{track.Position,-6}{track.Title}"),
+                    new(track.TrackId, $"{ToStatusString(track)}{track.Artist}") { ForeColour = Color.White }
+                    })
+                )
+            );
+
+        var itemId = 0;
+
+        var grouped = dates.Select(group =>
+            new MultilineListItemGrouping(
+                new ListingItemGroup(group.Key.ToLocalTime().ToString("dddd dd MMM")) { ForeColour = theme.Top2000Colour },
+                group.SelectMany(date => new List<ListingItem> {
+                    new(itemId++, TimeOnly(date), PositionDateTime(date))
+                    })
+                )
+            );
+
+
+        ListingListView.Source = new DoubleGroupedListViewWrapper(list, grouped);
     }
+
+    public static DateTime LocalPlayDateAndTime(TrackListing listing) => listing.PlayUtcDateAndTime.ToLocalTime();
+    private DateTime LocalPlayDate(DateTime arg) => arg.Date;
 
     public void ShowListingsByPosition()
     {
@@ -164,30 +200,76 @@ public class MainWindow : Toplevel
             .GroupByPosition()
             .Select(group =>
                 new MultilineListItemGrouping(
-                    new ListingItemGroup(group.Key),
+                    new ListingItemGroup(group.Key) { ForeColour = theme.Top2000Colour },
                     group.SelectMany(track => new List<ListingItem> {
                                 new(track.TrackId, $"{track.Position,-6}{track.Title}"),
-                                new(track.TrackId, $"      {track.Artist}")
-                        })
+                                new(track.TrackId, $"{ToStatusString(track)}{track.Artist}") { ForeColour = Color.White }
+                        }
                     )
                 )
-            .ToList();
+            );
 
-        ListingListView.Source = new MultilineListViewWrapper(list)
-        {
-            GroupColour = Terminal.Gui.Color.BrightRed,
-            ShowGroupHeader = true,
-        };
+        ListingListView.Source = new MultilineListViewWrapper(list);
     }
+
+    static string ToStatusString(TrackListing track)
+    {
+        var value = track.Delta;
+        var symbol = Symbols.Same;
+
+        if (value is null)
+        {
+            if (track.IsRecurring)
+            {
+                symbol = Symbols.BackInList;
+            }
+            else
+            {
+                symbol = Symbols.New;
+            }
+        }
+        else
+        {
+            if (value.Value > 0)
+            {
+                symbol = Symbols.Up;
+            }
+            else if (value.Value < 0)
+            {
+                symbol = Symbols.Down;
+            }
+        }
+
+        var status = symbol;
+
+        return status;
+    }
+
+
 
     static string PositionDateTime(DateTime utcPlayTime)
     {
         var localTime = utcPlayTime.ToLocalTime();
 
         var hour = localTime.Hour + 1;
-        var date = localTime.ToString("dddd dd MMM H");
+        var date = localTime.ToString("dddd dd MMM HH");
 
         return $"{date}:00 - {hour}:00";
     }
+
+    static string TimeOnly(DateTime utcPlayTime)
+    {
+        var localTime = utcPlayTime.ToLocalTime();
+
+        return $"{localTime.Hour}:00 - {localTime.Hour + 1}:00";
+    }
 }
 
+public static class Symbols
+{
+    public const string New = "\uF73A";
+    public const string Up = "\uFC35";
+    public const string Same = "\uFA74";
+    public const string BackInList = "\uF94F";
+    public const string Down = "\uFC2C";
+}

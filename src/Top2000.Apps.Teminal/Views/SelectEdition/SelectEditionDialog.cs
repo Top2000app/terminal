@@ -2,7 +2,6 @@
 
 namespace Top2000.Apps.Teminal.Views.SelectEdition;
 
-
 public class SelectEditionDialog : Dialog
 {
     private readonly EditionsDataSource editionDataSource;

@@ -39,12 +39,13 @@ public class MultilineListView : ListView
         }
         set
         {
-            var groupId = 0;
             base.Source = value;
             OriginalSource = value;
-            GroupedSource = new MultilineListViewWrapper(value.Groups.Select(x => new ListingItem(groupId++, x.Content)));
+            GroupedSource = value.GroupedMultiLineViewWrapper;
         }
     }
+
+    public bool IsGroupedByDate { get; set; }
 
     public required Func<ListingItem, Task> OnOpenTrackAsync { get; init; }
 
@@ -64,11 +65,16 @@ public class MultilineListView : ListView
     {
         if (State == ListViewState.Groups)
         {
+            var rows = OriginalSource.FindIndexOf(selectedItem.SearchContent);
+            if (rows == -1)
+            {
+                return;
+            }
+
             State = ListViewState.Listing;
 
             base.Source = OriginalSource;
 
-            var rows = OriginalSource.FindIndexOf(selectedItem.Content);
 
             SelectedItem = rows + Viewport.Height - 1;
             EnsureSelectedItemVisible();

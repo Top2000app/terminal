@@ -1,3 +1,5 @@
+using Top2000.Apps.Teminal.Views;
+
 namespace Top2000.Apps.Teminal.Custom;
 
 public sealed class MultilineListItemGrouping : IGrouping<ListingItemGroup, ListingItem>
@@ -19,32 +21,52 @@ public sealed class MultilineListItemGrouping : IGrouping<ListingItemGroup, List
 
 public class ListingItem
 {
-    protected ListingItem(string content)
-    {
-        Content = content;
-    }
-
     public ListingItem(int id, string content)
     {
         Id = id;
         Content = content;
+        SearchContent = content;
+    }
+
+    public ListingItem(int id, string content, string searchContent)
+    {
+        Id = id;
+        Content = content;
+        SearchContent = searchContent;
     }
 
     public int? Id { get; protected set; }
     public string Content { get; protected set; }
+
+    public string SearchContent { get; protected set; }
+
+    public Color? ForeColour { get; set; }
 }
 
 public class ListingItemGroup : ListingItem
 {
-    public ListingItemGroup(string content) : base(content)
+    public ListingItemGroup(string content) : base(0, content)
     {
         Id = null;
     }
 }
 
+public class DoubleGroupedListViewWrapper : MultilineListViewWrapper
+{
+    public DoubleGroupedListViewWrapper(IEnumerable<MultilineListItemGrouping> groupedSource, IEnumerable<MultilineListItemGrouping> groupedGroups)
+        : base(groupedSource)
+    {
+        this.GroupedGroups = groupedGroups;
+
+        GroupedMultiLineViewWrapper = new MultilineListViewWrapper(groupedGroups);
+    }
+
+    public IEnumerable<MultilineListItemGrouping> GroupedGroups { get; }
+}
+
 public class MultilineListViewWrapper : IListDataSource
 {
-    private readonly List<ListingItem> source;
+    protected readonly List<ListingItem> source;
 
     public MultilineListViewWrapper(IEnumerable<ListingItem> source)
     {
@@ -53,6 +75,7 @@ public class MultilineListViewWrapper : IListDataSource
         Length = GetMaxLengthItem();
 
         CollectionChanged += (_, __) => { };
+        GroupedMultiLineViewWrapper = this;
     }
 
     public MultilineListViewWrapper(IEnumerable<MultilineListItemGrouping> groupedSource)
@@ -60,8 +83,13 @@ public class MultilineListViewWrapper : IListDataSource
         IsGrouped = true;
         source = [];
 
+        var groupId = 0;
+        var groups = new List<ListingItem>();
+
         foreach (var group in groupedSource)
         {
+            groups.Add(new ListingItem(groupId++, group.Key.Content));
+
             source.Add(group.Key);
             source.AddRange(group);
         }
@@ -69,15 +97,19 @@ public class MultilineListViewWrapper : IListDataSource
         Length = GetMaxLengthItem();
 
         CollectionChanged += (_, __) => { };
-    }
 
-    public bool ShowGroupHeader { get; set; }
+        GroupedMultiLineViewWrapper = new MultilineListViewWrapper(groups);
+    }
 
     public bool IsGrouped
     {
         get;
     }
 
+    public MultilineListViewWrapper GroupedMultiLineViewWrapper
+    {
+        get; protected set;
+    }
 
     public ListingItem? this[int index]
     {
@@ -159,8 +191,6 @@ public class MultilineListViewWrapper : IListDataSource
         return -1;
     }
 
-    public Terminal.Gui.Color? GroupColour { get; set; }
-
     public void Render(ListView container, ConsoleDriver driver, bool selected, int item, int col, int line, int width, int start = 0)
     {
         var itemToRender = source[item];
@@ -184,26 +214,11 @@ public class MultilineListViewWrapper : IListDataSource
         }
         else
         {
-            if (IsGrouped && itemToRender is ListingItemGroup)
-            {
-                driver.SetAttribute(new(GroupColour ?? container.ColorScheme.Normal.Foreground, container.ColorScheme.Normal.Background));
-            }
-            else
-            {
-                driver.SetAttribute(container.ColorScheme.Normal);
-            }
+            driver.SetAttribute(new(itemToRender.ForeColour ?? container.ColorScheme.Normal.Foreground, container.ColorScheme.Normal.Background));
         }
 
-        if (ShowGroupHeader && itemToRender is ListingItemGroup)
-        {
-            var content = $"\u2528{itemToRender.Content}\u2523";
-            RenderUstr(driver, content, width, start, '\u2500');
-        }
-        else
-        {
-            RenderUstr(driver, itemToRender.Content, width, start, ' ');
-        }
 
+        RenderUstr(container, driver, itemToRender.Content, width, start, ' ');
     }
 
     public void SetMark(int item, bool value)
@@ -213,23 +228,58 @@ public class MultilineListViewWrapper : IListDataSource
 
     public IList ToList() => source.ToList();
 
-    public IEnumerable<ListingItem> Groups
-    {
-        get
-        {
-            return source.Where(x => x is ListingItemGroup);
-        }
-    }
+    public IEnumerable<ListingItem> Groups => source.Where(x => x is ListingItemGroup);
 
-    private static void RenderUstr(ConsoleDriver driver, string ustr, int width, int start, char filler)
+    private static void RenderUstr(ListView container, ConsoleDriver driver, string ustr, int width, int start, char filler)
     {
-        var str = start > ustr.GetColumns()
+        var green = ustr.IndexOf(Symbols.Up, StringComparison.CurrentCultureIgnoreCase);
+        var yellow = ustr.IndexOf(Symbols.New, StringComparison.CurrentCultureIgnoreCase);
+        var alsoYellow = ustr.IndexOf(Symbols.BackInList, StringComparison.CurrentCultureIgnoreCase);
+        var red = ustr.IndexOf("\uFC2C", StringComparison.CurrentCultureIgnoreCase);
+
+        var skip = 0;
+
+        if (green != -1 || yellow != -1 || red != -1 || alsoYellow != -1)
+        {
+            if (green != -1)
+            {
+                driver.SetAttribute(new(new Color(112, 173, 71), container.ColorScheme.Normal.Background));
+                driver.AddStr(Symbols.New);
+                skip = 1;
+            }
+
+            if (yellow != -1)
+            {
+                driver.SetAttribute(new(new Color(255, 192, 0), container.ColorScheme.Normal.Background));
+                driver.AddStr(Symbols.New);
+                skip = 2;
+            }
+
+            if (alsoYellow != -1)
+            {
+                driver.SetAttribute(new(new Color(255, 192, 0), container.ColorScheme.Normal.Background));
+                driver.AddStr(Symbols.BackInList);
+                skip = 1;
+            }
+
+            if (red != -1)
+            {
+                driver.SetAttribute(new(new Color(218, 22, 28), container.ColorScheme.Normal.Background));
+                driver.AddStr("\uFC2C");
+                skip = 1;
+            }
+
+            ustr = ustr.Substring(skip);
+            driver.SetAttribute(new(container.ColorScheme.Normal.Foreground, container.ColorScheme.Normal.Background));
+        }
+
+        var str = start > ustr.GetColumns() + skip
             ? string.Empty
             : ustr.Substring(Math.Min(start, ustr.ToRunes().Length - 1));
 
-        var u = TextFormatter.ClipAndJustify(str, width, Alignment.Start);
+        var u = TextFormatter.ClipAndJustify(str, width - 1, Alignment.Start);
         driver.AddStr(u);
-        width -= u.GetColumns();
+        width -= u.GetColumns() + skip;
 
         while (width-- > 0)
         {

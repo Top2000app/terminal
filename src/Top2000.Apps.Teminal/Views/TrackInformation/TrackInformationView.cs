@@ -1,4 +1,5 @@
-﻿using Top2000.Features.TrackInformation;
+﻿using Top2000.Apps.Teminal.Theme;
+using Top2000.Features.TrackInformation;
 
 namespace Top2000.Apps.Teminal.Views.TrackInformation;
 
@@ -10,15 +11,14 @@ public class TrackInformationView : View
     {
         this.mediator = mediator;
 
-        X = 0;
+        X = 1;
         Y = 0;
         Height = Dim.Fill();
         Width = Dim.Fill();
     }
 
-    public async Task LoadTrackInformationAsync(int trackId)
+    public async Task LoadTrackInformationAsync(int trackId, ITheme theme)
     {
-
         var trackInformation = await mediator.Send(new TrackInformationRequest { TrackId = trackId });
 
         var title = new Label()
@@ -29,7 +29,6 @@ public class TrackInformationView : View
             Width = Dim.Fill(),
             Text = trackInformation.Title,
         };
-
 
         var artist = new Label
         {
@@ -46,58 +45,46 @@ public class TrackInformationView : View
             Y = Pos.Bottom(title),
             Height = 1,
             Width = 7,
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
             Text = $"({trackInformation.RecordedYear})",
         };
 
         Add(title, artist, recordingYear);
 
-        var line = new LineView(Orientation.Horizontal)
+        Add(new LineView(Orientation.Horizontal)
         {
             X = 0,
-            Y = 3
-        };
-
-        Add(line);
+            Y = 2
+        });
 
         var noteringenText = "Noteringen";
 
         Add(new Label
         {
-            X = 5,
+            X = 0,
             Y = 3,
             Height = 1,
             Width = noteringenText.Length + 2,
-            Text = $"\u2528{noteringenText}\u2523"
+            Text = $"{noteringenText}",
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
-        Add(new Label
+        Add(new LineView(Orientation.Horizontal)
         {
-            X = 23,
-            Y = 3,
-            Height = 1,
-            Width = 1,
-            Text = "\u2533"
+            X = 0,
+            Y = 4
         });
 
-        var lineDown = new LineView(Orientation.Vertical)
-        {
-            X = 23,
-            Y = 4,
-        };
-        Add(lineDown);
 
         var frame = new FrameView
         {
-            X = Pos.Right(lineDown),
+            X = 24,
             Y = 5,
             Width = Dim.Fill(2),
             Height = Dim.Fill(2),
             BorderStyle = LineStyle.None
         };
         Add(frame);
-
-
 
         var labels = new[] { "Aantal sinds onstaan", "Aantal in Top 2000", "", "Hoogste notering", "Laagste notering", "Eerste notering", "Laatste notering" };
         var maxLenght = labels.Max(x => x.Length);
@@ -135,7 +122,7 @@ public class TrackInformationView : View
             Y = 3,
             Width = 5,
             Text = $"{trackInformation.Highest.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -153,7 +140,7 @@ public class TrackInformationView : View
             Y = 4,
             Width = 5,
             Text = $"{trackInformation.Lowest.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -171,7 +158,7 @@ public class TrackInformationView : View
             Y = 5,
             Width = 5,
             Text = $"{trackInformation.First.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -189,7 +176,7 @@ public class TrackInformationView : View
             Y = 6,
             Width = 5,
             Text = $"{trackInformation.Latest.Position}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.BrightRed, ColorScheme.Normal.Background)),
+            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
         frame.Add(new Label
@@ -201,14 +188,25 @@ public class TrackInformationView : View
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
-        frame.Add(new Label
+        if (trackInformation.Latest.LocalUtcDateAndTime.HasValue)
         {
-            X = maxLenght + 6,
-            Y = 7,
-            Width = Dim.Fill(),
-            Text = $"{trackInformation.Latest.LocalUtcDateAndTime}",
-            ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
-        });
+            frame.Add(new Label
+            {
+                X = 0,
+                Y = labels.Length + 2,
+                Text = "Laatste Top 2000",
+            });
+
+            var hour = trackInformation.Latest.LocalUtcDateAndTime.Value.Hour;
+
+            frame.Add(new Label
+            {
+                X = 0,
+                Y = labels.Length + 3,
+                Width = Dim.Fill(),
+                Text = $"{trackInformation.Latest.LocalUtcDateAndTime.Value.ToString("dddd dd MMMM yyyy")} {hour}:00 - {hour + 1}:00",
+            });
+        }
 
         var table = new ListingInformationTableView(new ListingInformationSource(trackInformation))
         {
@@ -236,79 +234,4 @@ public class TrackInformationView : View
 
         SetNeedsDisplay();
     }
-
-}
-
-public class ListingInformationTableView : TableView
-{
-    public ListingInformationTableView(ListingInformationSource table) : base(table) { }
-
-    protected override void RenderCell(Terminal.Gui.Attribute cellColor, string render, bool isPrimaryCell)
-    {
-        var green = render.IndexOf("\uFC35", StringComparison.CurrentCultureIgnoreCase);
-        var yellow = render.IndexOf("\uF73A", StringComparison.CurrentCultureIgnoreCase);
-        var alsoYellow = render.IndexOf("\uF94F", StringComparison.CurrentCultureIgnoreCase);
-        var red = render.IndexOf("\uFC2C", StringComparison.CurrentCultureIgnoreCase);
-
-        for (var i = 0; i < render.Length; i++)
-        {
-            if (i == green)
-            {
-                Driver.SetAttribute(new(Terminal.Gui.Color.BrightGreen, cellColor.Background));
-            }
-
-            if (i == yellow || i == alsoYellow)
-            {
-                Driver.SetAttribute(new(Terminal.Gui.Color.BrightYellow, cellColor.Background));
-            }
-
-            if (i == red)
-            {
-                Driver.SetAttribute(new(Terminal.Gui.Color.BrightRed, cellColor.Background));
-            }
-
-            Driver.AddRune((Rune)render[i]);
-            Driver.SetAttribute(cellColor);
-        }
-    }
-}
-
-public class ListingInformationSource : ITableSource
-{
-    private readonly SortedSet<ListingInformation> listings;
-    private readonly object[][] rowcolumn;
-
-    public ListingInformationSource(TrackDetails trackDetails)
-    {
-        listings = trackDetails.Listings;
-
-        rowcolumn = listings
-            .Select(x =>
-            {
-                var offset = x.Status switch
-                {
-                    ListingStatus.NotAvailable => "",
-                    ListingStatus.NotListed => "",
-                    ListingStatus.Increased => $"\uFC35 {Math.Abs(x.Offset!.Value)}",
-                    ListingStatus.New => "\uF73A",
-                    ListingStatus.Unchanged => "\uFA74",
-                    ListingStatus.Back => "\uF94F",
-                    ListingStatus.Decreased => $"\uFC2C {Math.Abs(x.Offset!.Value)}",
-                    _ => "\uFAAF"
-                };
-
-                return new object[] { x.Edition.ToString().PadRight(5, ' '), x.Position?.ToString().PadRight(5, ' ') ?? "-", offset };
-            })
-            .ToArray();
-    }
-
-
-
-    public object this[int row, int col] => rowcolumn[row][col];
-
-    public string[] ColumnNames => ["", "", ""];
-
-    public int Columns => ColumnNames.Length;
-
-    public int Rows => listings.Count;
 }

@@ -39,6 +39,8 @@ var listingsResults = await mediator.Send(new AllListingsOfEditionRequest { Year
 
 Application.Init();
 
+
+
 var trackInformationView = services.GetRequiredService<TrackInformationView>();
 
 Application.Run(new MainWindow(mediator, trackInformationView, listingsResults, editions));
