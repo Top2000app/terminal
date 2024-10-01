@@ -15,7 +15,6 @@ public class MainWindow : Toplevel
     private HashSet<TrackListing> trackListings;
     private readonly MenuItem showByPosition;
     private readonly MenuItem showByDate;
-    private readonly FrameView listingFrame;
     private readonly Label SelectedEditionLabel;
     private readonly SelectEditionDialog selectEditionDialog;
     private readonly ITheme theme;
@@ -50,7 +49,7 @@ public class MainWindow : Toplevel
             [
                 new MenuBarItem("_File", new MenuItem[] {
                     new("_Selecteer Editie", "", async () => await ShowSelectedEditionDialog() ),
-                    null,
+                    null!,
                     new("_Quit", "", () => { Application.RequestStop (); })
                 }),
                 new MenuBarItem("_View", new MenuItem[] {
@@ -64,7 +63,7 @@ public class MainWindow : Toplevel
             ColorScheme = theme.MenuBarColorScheme
         };
 
-        listingFrame = new()
+        var listingFrame = new FrameView
         {
             X = 0,
             Y = Pos.Bottom(menu),
@@ -101,7 +100,7 @@ public class MainWindow : Toplevel
         {
             X = Pos.Right(listingFrame),
             Y = Pos.Bottom(menu),
-            Width = Dim.Percent(70) - 10,
+            Width = Dim.Percent(70)! - 10,
             Height = Dim.Fill(),
             ColorScheme = theme.TrackInfoColorScheme,
             BorderStyle = LineStyle.None,
@@ -189,7 +188,7 @@ public class MainWindow : Toplevel
     }
 
     public static DateTime LocalPlayDateAndTime(TrackListing listing) => listing.PlayUtcDateAndTime.ToLocalTime();
-    private DateTime LocalPlayDate(DateTime arg) => arg.Date;
+    private static DateTime LocalPlayDate(DateTime arg) => arg.Date;
 
     public void ShowListingsByPosition()
     {
@@ -225,27 +224,25 @@ public class MainWindow : Toplevel
             }
             else
             {
-                symbol = Symbols.New;
+                symbol = Symbols.New + " ";
             }
         }
         else
         {
             if (value.Value > 0)
             {
-                symbol = Symbols.Up;
+                symbol = Symbols.Up + " ";
             }
             else if (value.Value < 0)
             {
-                symbol = Symbols.Down;
+                symbol = Symbols.Down + " ";
             }
         }
 
         var status = symbol;
 
-        return status;
+        return status + "    ";
     }
-
-
 
     static string PositionDateTime(DateTime utcPlayTime)
     {
@@ -265,11 +262,3 @@ public class MainWindow : Toplevel
     }
 }
 
-public static class Symbols
-{
-    public const string New = "\uF73A";
-    public const string Up = "\uFC35";
-    public const string Same = "\uFA74";
-    public const string BackInList = "\uF94F";
-    public const string Down = "\uFC2C";
-}

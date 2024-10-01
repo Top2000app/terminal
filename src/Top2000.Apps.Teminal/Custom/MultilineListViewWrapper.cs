@@ -1,4 +1,4 @@
-using Top2000.Apps.Teminal.Views;
+using Top2000.Apps.Teminal.Theme;
 
 namespace Top2000.Apps.Teminal.Custom;
 
@@ -218,7 +218,7 @@ public class MultilineListViewWrapper : IListDataSource
         }
 
 
-        RenderUstr(container, driver, itemToRender.Content, width, start, ' ');
+        RenderUstr(driver.CurrentAttribute, driver, itemToRender.Content, width, start, ' ', shouldSelectItem);
     }
 
     public void SetMark(int item, bool value)
@@ -230,56 +230,42 @@ public class MultilineListViewWrapper : IListDataSource
 
     public IEnumerable<ListingItem> Groups => source.Where(x => x is ListingItemGroup);
 
-    private static void RenderUstr(ListView container, ConsoleDriver driver, string ustr, int width, int start, char filler)
+    private static void RenderUstr(Terminal.Gui.Attribute drawingAttribute, ConsoleDriver driver, string ustr, int width, int start, char filler, bool isSelected)
     {
-        var green = ustr.IndexOf(Symbols.Up, StringComparison.CurrentCultureIgnoreCase);
-        var yellow = ustr.IndexOf(Symbols.New, StringComparison.CurrentCultureIgnoreCase);
-        var alsoYellow = ustr.IndexOf(Symbols.BackInList, StringComparison.CurrentCultureIgnoreCase);
-        var red = ustr.IndexOf("\uFC2C", StringComparison.CurrentCultureIgnoreCase);
-
-        var skip = 0;
-
-        if (green != -1 || yellow != -1 || red != -1 || alsoYellow != -1)
+        if (!isSelected)
         {
-            if (green != -1)
+            if (ustr.StartsWith(Symbols.Up))
             {
-                driver.SetAttribute(new(new Color(112, 173, 71), container.ColorScheme.Normal.Background));
-                driver.AddStr(Symbols.New);
-                skip = 1;
+                driver.SetAttribute(new(new Color(112, 173, 71), drawingAttribute.Background));
             }
 
-            if (yellow != -1)
+            if (ustr.StartsWith(Symbols.New) || ustr.StartsWith(Symbols.BackInList))
             {
-                driver.SetAttribute(new(new Color(255, 192, 0), container.ColorScheme.Normal.Background));
-                driver.AddStr(Symbols.New);
-                skip = 2;
+                driver.SetAttribute(new(new Color(255, 192, 0), drawingAttribute.Background));
             }
 
-            if (alsoYellow != -1)
+            if (ustr.StartsWith(Symbols.Down))
             {
-                driver.SetAttribute(new(new Color(255, 192, 0), container.ColorScheme.Normal.Background));
-                driver.AddStr(Symbols.BackInList);
-                skip = 1;
+                driver.SetAttribute(new(new Color(218, 22, 28), drawingAttribute.Background));
             }
 
-            if (red != -1)
+            if (ustr.StartsWith(Symbols.Same))
             {
-                driver.SetAttribute(new(new Color(218, 22, 28), container.ColorScheme.Normal.Background));
-                driver.AddStr("\uFC2C");
-                skip = 1;
+                driver.SetAttribute(new(Color.Gray, drawingAttribute.Background));
             }
-
-            ustr = ustr.Substring(skip);
-            driver.SetAttribute(new(container.ColorScheme.Normal.Foreground, container.ColorScheme.Normal.Background));
         }
 
-        var str = start > ustr.GetColumns() + skip
+        driver.AddStr(ustr.Substring(0, 2));
+        driver.SetAttribute(drawingAttribute);
+        ustr = ustr.Substring(2);
+
+        var str = start > ustr.GetColumns() + 2
             ? string.Empty
             : ustr.Substring(Math.Min(start, ustr.ToRunes().Length - 1));
 
         var u = TextFormatter.ClipAndJustify(str, width - 1, Alignment.Start);
         driver.AddStr(u);
-        width -= u.GetColumns() + skip;
+        width -= u.GetColumns() + 2;
 
         while (width-- > 0)
         {
