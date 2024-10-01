@@ -25,7 +25,6 @@ public class MainWindow : Toplevel
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
         theme = (ITheme)ThemeManager.Instance[ThemeManager.Instance.Theme];
-
         ThemeManager.Instance.ThemeChanged += ThemeChanged;
 
         this.mediator = mediator;

@@ -74,9 +74,9 @@ public class MultilineListView : ListView
             State = ListViewState.Listing;
 
             base.Source = OriginalSource;
+            var x = rows + Viewport.Height - 1;
 
-
-            SelectedItem = rows + Viewport.Height - 1;
+            SelectedItem = Math.Min(x, Source.Count - 1);
             EnsureSelectedItemVisible();
             SelectedItem = rows;
         }
