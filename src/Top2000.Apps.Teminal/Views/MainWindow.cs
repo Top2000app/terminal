@@ -167,7 +167,7 @@ public class MainWindow : Toplevel
                 new ListingItemGroup(PositionDateTime(group.Key)) { ForeColour = theme.Top2000Colour },
                 group.SelectMany(track => new List<ListingItem> {
                     new(track.TrackId, $"{track.Position,-6}{track.Title}"),
-                    new(track.TrackId, $"{ToStatusString(track)}{track.Artist}") { ForeColour = Color.White }
+                    new(track.TrackId, $"{ToStatusString(track)}{track.Artist}")
                     })
                 )
             );
@@ -202,7 +202,7 @@ public class MainWindow : Toplevel
                     new ListingItemGroup(group.Key) { ForeColour = theme.Top2000Colour },
                     group.SelectMany(track => new List<ListingItem> {
                                 new(track.TrackId, $"{track.Position,-6}{track.Title}"),
-                                new(track.TrackId, $"{ToStatusString(track)}{track.Artist}") { ForeColour = Color.White }
+                                new(track.TrackId, $"{ToStatusString(track)}{track.Artist}")
                         }
                     )
                 )

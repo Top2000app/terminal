@@ -1,25 +1,6 @@
 ﻿namespace Top2000.Apps.Teminal.Theme
 {
-    public class Themes
-    {
-        private readonly ITheme[] themes = [
-            new BlackTheme()
-            ];
-
-        public ITheme DefaultTheme() => themes[0];
-    }
-
-    public interface ITheme
-    {
-        Color Top2000Colour { get; }
-        ColorScheme MenuBarColorScheme { get; }
-        ColorScheme ListViewColorScheme { get; }
-
-        ColorScheme TrackInfoColorScheme { get; }
-        ColorScheme SelectedEditionLabelColorScheme { get; }
-    }
-
-    public class BlackTheme : ITheme
+    public class DarkTheme : ITheme
     {
         public Color Top2000Colour => new(218, 22, 28);
 
@@ -54,9 +35,9 @@
         {
             Disabled = new Terminal.Gui.Attribute(foreground: Color.White, background: Color.Black),
             Normal = new Terminal.Gui.Attribute(foreground: Color.White, background: Color.Black),
-            Focus = new Terminal.Gui.Attribute(foreground: Color.White, background: new Color(135, 8, 24)),
-            HotFocus = new Terminal.Gui.Attribute(foreground: Color.White, background: new Color(135, 8, 24)),
-            HotNormal = new Terminal.Gui.Attribute(foreground: Color.White, background: new Color(21, 21, 21)),
+            Focus = new Terminal.Gui.Attribute(foreground: Color.White, background: Color.Black),
+            HotFocus = new Terminal.Gui.Attribute(foreground: Color.White, background: Color.Black),
+            HotNormal = new Terminal.Gui.Attribute(foreground: Color.White, background: Color.Black),
         };
     }
 }

@@ -232,27 +232,24 @@ public class MultilineListViewWrapper : IListDataSource
 
     private static void RenderUstr(Terminal.Gui.Attribute drawingAttribute, ConsoleDriver driver, string ustr, int width, int start, char filler, bool isSelected)
     {
-        if (!isSelected)
+        if (ustr.StartsWith(Symbols.Up))
         {
-            if (ustr.StartsWith(Symbols.Up))
-            {
-                driver.SetAttribute(new(new Color(112, 173, 71), drawingAttribute.Background));
-            }
+            driver.SetAttribute(new(new Color(112, 173, 71), drawingAttribute.Background));
+        }
 
-            if (ustr.StartsWith(Symbols.New) || ustr.StartsWith(Symbols.BackInList))
-            {
-                driver.SetAttribute(new(new Color(255, 192, 0), drawingAttribute.Background));
-            }
+        if (ustr.StartsWith(Symbols.New) || ustr.StartsWith(Symbols.BackInList))
+        {
+            driver.SetAttribute(new(new Color(255, 192, 0), drawingAttribute.Background));
+        }
 
-            if (ustr.StartsWith(Symbols.Down))
-            {
-                driver.SetAttribute(new(new Color(218, 22, 28), drawingAttribute.Background));
-            }
+        if (ustr.StartsWith(Symbols.Down))
+        {
+            driver.SetAttribute(new(new Color(218, 22, 28), drawingAttribute.Background));
+        }
 
-            if (ustr.StartsWith(Symbols.Same))
-            {
-                driver.SetAttribute(new(Color.Gray, drawingAttribute.Background));
-            }
+        if (ustr.StartsWith(Symbols.Same))
+        {
+            driver.SetAttribute(new(Color.Gray, drawingAttribute.Background));
         }
 
         driver.AddStr(ustr.Substring(0, 2));
