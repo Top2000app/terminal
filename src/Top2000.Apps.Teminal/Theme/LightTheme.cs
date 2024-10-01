@@ -1,6 +1,6 @@
 ﻿namespace Top2000.Apps.Teminal.Theme
 {
-    public class LightTheme : ITheme
+    public class LightTheme : ThemeScope, ITheme
     {
         public Color Top2000Colour => new(218, 22, 28);
 

@@ -218,7 +218,7 @@ public class MultilineListViewWrapper : IListDataSource
         }
 
 
-        RenderUstr(driver.CurrentAttribute, driver, itemToRender.Content, width, start, ' ', shouldSelectItem);
+        RenderUstr(driver.CurrentAttribute, driver, itemToRender.Content, width, start);
     }
 
     public void SetMark(int item, bool value)
@@ -230,7 +230,7 @@ public class MultilineListViewWrapper : IListDataSource
 
     public IEnumerable<ListingItem> Groups => source.Where(x => x is ListingItemGroup);
 
-    private static void RenderUstr(Terminal.Gui.Attribute drawingAttribute, ConsoleDriver driver, string ustr, int width, int start, char filler, bool isSelected)
+    private static void RenderUstr(Terminal.Gui.Attribute drawingAttribute, ConsoleDriver driver, string ustr, int width, int start)
     {
         if (ustr.StartsWith(Symbols.Up))
         {
@@ -266,7 +266,7 @@ public class MultilineListViewWrapper : IListDataSource
 
         while (width-- > 0)
         {
-            driver.AddRune((Rune)filler);
+            driver.AddRune((Rune)' ');
         }
     }
 }

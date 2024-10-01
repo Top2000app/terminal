@@ -1,5 +1,6 @@
 ﻿using Figgle;
 using Microsoft.Extensions.DependencyInjection;
+using Top2000.Apps.Teminal.Theme;
 using Top2000.Apps.Teminal.Views;
 using Top2000.Apps.Teminal.Views.TrackInformation;
 using Top2000.Data.ClientDatabase;
@@ -39,7 +40,13 @@ var listingsResults = await mediator.Send(new AllListingsOfEditionRequest { Year
 
 Application.Init();
 
+ThemeManager.Themes = new Dictionary<string, ThemeScope>
+{
+    { nameof(LightTheme), new LightTheme() },
+    { nameof(DarkTheme), new DarkTheme() }
+};
 
+ThemeManager.Instance.Theme = nameof(DarkTheme);
 
 var trackInformationView = services.GetRequiredService<TrackInformationView>();
 

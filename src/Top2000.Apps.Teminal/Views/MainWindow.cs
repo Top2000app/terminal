@@ -10,18 +10,23 @@ namespace Top2000.Apps.Teminal.Views;
 
 public class MainWindow : Toplevel
 {
+    private ITheme theme;
     private readonly IMediator mediator;
     private readonly TrackInformationView trackInformationView;
     private HashSet<TrackListing> trackListings;
     private readonly MenuItem showByPosition;
     private readonly MenuItem showByDate;
-    private readonly Label SelectedEditionLabel;
+    private readonly MenuItem showlightTheme;
+    private readonly MenuItem showDarkTheme;
+    private readonly FrameView listingFrame;
+    private readonly Label selectedEditionLabel;
     private readonly SelectEditionDialog selectEditionDialog;
-    private readonly ITheme theme;
+
     public MainWindow(IMediator mediator, TrackInformationView view, HashSet<TrackListing> trackListings, SortedSet<Edition> editions)
     {
-        var themes = new Themes();
-        theme = themes.DefaultTheme();
+        theme = (ITheme)ThemeManager.Instance[ThemeManager.Instance.Theme];
+
+        ThemeManager.Instance.ThemeChanged += ThemeChanged;
 
         this.mediator = mediator;
         trackInformationView = view;
@@ -41,6 +46,18 @@ public class MainWindow : Toplevel
             Checked = false,
         };
 
+        showlightTheme = new("Light theme", "", ChangeToLigthTheme)
+        {
+            CheckType = MenuItemCheckStyle.Radio,
+            Checked = ThemeManager.Instance.Theme == nameof(LightTheme)
+        };
+
+        showDarkTheme = new("Dark theme", "", ChangeToDarkTheme)
+        {
+            CheckType = MenuItemCheckStyle.Radio,
+            Checked = ThemeManager.Instance.Theme == nameof(DarkTheme)
+        };
+
         selectEditionDialog = new(editions);
 
         var menu = new MenuBar
@@ -54,7 +71,10 @@ public class MainWindow : Toplevel
                 }),
                 new MenuBarItem("_View", new MenuItem[] {
                     showByPosition,
-                    showByDate
+                    showByDate,
+                    null!,
+                    showlightTheme,
+                    showDarkTheme
                 }),
                 new MenuBarItem("_Help", new MenuItem[] {
                     new("_About", "", async () => {await new AboutDialog().ShowDialogAsync(); })
@@ -63,7 +83,7 @@ public class MainWindow : Toplevel
             ColorScheme = theme.MenuBarColorScheme
         };
 
-        var listingFrame = new FrameView
+        listingFrame = new()
         {
             X = 0,
             Y = Pos.Bottom(menu),
@@ -74,7 +94,7 @@ public class MainWindow : Toplevel
             BorderStyle = LineStyle.None,
         };
 
-        SelectedEditionLabel = new()
+        selectedEditionLabel = new()
         {
             X = 0,
             Y = 0,
@@ -95,8 +115,8 @@ public class MainWindow : Toplevel
             OnOpenTrackAsync = HandleOpenTrackAsync,
         };
 
-        listingFrame.Add(SelectedEditionLabel, ListingListView);
-        var infoFrame = new FrameView()
+        listingFrame.Add(selectedEditionLabel, ListingListView);
+        infoFrame = new()
         {
             X = Pos.Right(listingFrame),
             Y = Pos.Bottom(menu),
@@ -112,8 +132,34 @@ public class MainWindow : Toplevel
 
     }
 
+    private void ThemeChanged(object? sender, ThemeManagerEventArgs e)
+    {
+        theme = (ITheme)ThemeManager.Instance[ThemeManager.Instance.Theme];
+        infoFrame.ColorScheme = theme.TrackInfoColorScheme;
+        selectedEditionLabel.ColorScheme = theme.SelectedEditionLabelColorScheme;
+        listingFrame.ColorScheme = theme.ListViewColorScheme;
+        MenuBar!.ColorScheme = theme.MenuBarColorScheme;
+
+        trackInformationView.ShowInformationWithTheme(theme);
+    }
+
+    private void ChangeToLigthTheme()
+    {
+        ThemeManager.Instance.Theme = nameof(LightTheme);
+        showlightTheme.Checked = true;
+        showDarkTheme.Checked = false;
+    }
+
+    private void ChangeToDarkTheme()
+    {
+        ThemeManager.Instance.Theme = nameof(DarkTheme);
+        showlightTheme.Checked = false;
+        showDarkTheme.Checked = true;
+    }
+
     public MultilineListView ListingListView { get; }
     public Edition SelectedEdition { get; set; }
+    public FrameView infoFrame { get; }
 
     private async Task ShowSelectedEditionDialog()
     {
@@ -122,7 +168,7 @@ public class MainWindow : Toplevel
         if (newEdition != SelectedEdition)
         {
             SelectedEdition = newEdition;
-            SelectedEditionLabel.Text = newEdition.Year.ToString();
+            selectedEditionLabel.Text = newEdition.Year.ToString();
             await LoadEditionAsync();
         }
     }

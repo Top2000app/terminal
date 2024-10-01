@@ -17,9 +17,12 @@ public class TrackInformationView : View
         Width = Dim.Fill();
     }
 
-    public async Task LoadTrackInformationAsync(int trackId, ITheme theme)
+    public void ShowInformationWithTheme(ITheme theme)
     {
-        var trackInformation = await mediator.Send(new TrackInformationRequest { TrackId = trackId });
+        if (TrackDetails is null)
+        {
+            return;
+        }
 
         var title = new Label()
         {
@@ -27,7 +30,7 @@ public class TrackInformationView : View
             Y = 0,
             Height = 1,
             Width = Dim.Fill(),
-            Text = trackInformation.Title,
+            Text = TrackDetails.Title,
         };
 
         var artist = new Label
@@ -36,17 +39,17 @@ public class TrackInformationView : View
             Y = Pos.Bottom(title),
             Height = 1,
             Width = Dim.Fill(),
-            Text = trackInformation.Artist,
+            Text = TrackDetails.Artist,
         };
 
         var recordingYear = new Label
         {
-            X = trackInformation.Artist.Length + 1,
+            X = TrackDetails.Artist.Length + 1,
             Y = Pos.Bottom(title),
             Height = 1,
             Width = 7,
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
-            Text = $"({trackInformation.RecordedYear})",
+            Text = $"({TrackDetails.RecordedYear})",
         };
 
         Add(title, artist, recordingYear);
@@ -105,7 +108,7 @@ public class TrackInformationView : View
             X = maxLenght + 1,
             Y = 0,
             Width = 5,
-            Text = $"{trackInformation.Appearances}/{trackInformation.AppearancesPossible}",
+            Text = $"{TrackDetails.Appearances}/{TrackDetails.AppearancesPossible}",
         });
 
         frame.Add(new Label
@@ -113,7 +116,7 @@ public class TrackInformationView : View
             X = maxLenght + 1,
             Y = 1,
             Width = 5,
-            Text = $"{trackInformation.Appearances}/{trackInformation.Listings.Count}",
+            Text = $"{TrackDetails.Appearances}/{TrackDetails.Listings.Count}",
         });
 
         frame.Add(new Label
@@ -121,7 +124,7 @@ public class TrackInformationView : View
             X = maxLenght + 1,
             Y = 3,
             Width = 5,
-            Text = $"{trackInformation.Highest.Position}",
+            Text = $"{TrackDetails.Highest.Position}",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
@@ -130,7 +133,7 @@ public class TrackInformationView : View
             X = maxLenght + 6,
             Y = 3,
             Width = 7,
-            Text = $"({trackInformation.Highest.Edition})",
+            Text = $"({TrackDetails.Highest.Edition})",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
@@ -139,7 +142,7 @@ public class TrackInformationView : View
             X = maxLenght + 1,
             Y = 4,
             Width = 5,
-            Text = $"{trackInformation.Lowest.Position}",
+            Text = $"{TrackDetails.Lowest.Position}",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
@@ -148,7 +151,7 @@ public class TrackInformationView : View
             X = maxLenght + 6,
             Y = 4,
             Width = 7,
-            Text = $"({trackInformation.Lowest.Edition})",
+            Text = $"({TrackDetails.Lowest.Edition})",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
@@ -157,7 +160,7 @@ public class TrackInformationView : View
             X = maxLenght + 1,
             Y = 5,
             Width = 5,
-            Text = $"{trackInformation.First.Position}",
+            Text = $"{TrackDetails.First.Position}",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
@@ -166,7 +169,7 @@ public class TrackInformationView : View
             X = maxLenght + 6,
             Y = 5,
             Width = 7,
-            Text = $"({trackInformation.First.Edition})",
+            Text = $"({TrackDetails.First.Edition})",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
@@ -175,7 +178,7 @@ public class TrackInformationView : View
             X = maxLenght + 1,
             Y = 6,
             Width = 5,
-            Text = $"{trackInformation.Latest.Position}",
+            Text = $"{TrackDetails.Latest.Position}",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(theme.Top2000Colour, ColorScheme.Normal.Background)),
         });
 
@@ -184,11 +187,11 @@ public class TrackInformationView : View
             X = maxLenght + 6,
             Y = 6,
             Width = 7,
-            Text = $"({trackInformation.Latest.Edition})",
+            Text = $"({TrackDetails.Latest.Edition})",
             ColorScheme = new ColorScheme(new Terminal.Gui.Attribute(Terminal.Gui.Color.Gray, ColorScheme.Normal.Background)),
         });
 
-        if (trackInformation.Latest.LocalUtcDateAndTime.HasValue)
+        if (TrackDetails.Latest.LocalUtcDateAndTime.HasValue)
         {
             frame.Add(new Label
             {
@@ -197,18 +200,18 @@ public class TrackInformationView : View
                 Text = "Laatste Top 2000",
             });
 
-            var hour = trackInformation.Latest.LocalUtcDateAndTime.Value.Hour;
+            var hour = TrackDetails.Latest.LocalUtcDateAndTime.Value.Hour;
 
             frame.Add(new Label
             {
                 X = 0,
                 Y = labels.Length + 3,
                 Width = Dim.Fill(),
-                Text = $"{trackInformation.Latest.LocalUtcDateAndTime.Value.ToString("dddd dd MMMM yyyy")} {hour}:00 - {hour + 1}:00",
+                Text = $"{TrackDetails.Latest.LocalUtcDateAndTime.Value.ToString("dddd dd MMMM yyyy")} {hour}:00 - {hour + 1}:00",
             });
         }
 
-        var table = new ListingInformationTableView(new ListingInformationSource(trackInformation))
+        var table = new ListingInformationTableView(new ListingInformationSource(TrackDetails))
         {
             X = 0,
             Y = 5,
@@ -233,5 +236,14 @@ public class TrackInformationView : View
         Add(table);
 
         SetNeedsDisplay();
+    }
+
+    public TrackDetails? TrackDetails { get; set; }
+
+    public async Task LoadTrackInformationAsync(int trackId, ITheme theme)
+    {
+        TrackDetails = await mediator.Send(new TrackInformationRequest { TrackId = trackId });
+
+        ShowInformationWithTheme(theme);
     }
 }
