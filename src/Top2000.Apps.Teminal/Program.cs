@@ -22,7 +22,7 @@ var services = new ServiceCollection()
 var assemblySource = services.GetRequiredService<Top2000AssemblyDataSource>();
 var update = services.GetRequiredService<IUpdateClientDatabase>();
 
-Console.WriteLine("Settings up Top2000 database");
+Console.WriteLine("Instellen Top2000 database");
 
 await update.RunAsync(assemblySource);
 
@@ -30,7 +30,7 @@ var onlineSource = services.GetRequiredService<OnlineDataSource>();
 var updateOnline = services.GetRequiredService<IUpdateClientDatabase>();
 
 
-Console.WriteLine("Updating Top2000 database");
+Console.WriteLine("Top2000 database updaten");
 await updateOnline.RunAsync(onlineSource);
 
 var mediator = services.GetRequiredService<IMediator>();

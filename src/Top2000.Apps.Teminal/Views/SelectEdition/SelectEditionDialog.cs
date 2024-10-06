@@ -36,14 +36,14 @@ public class SelectEditionDialog : Dialog
 
         this.Add(this.editionsTable);
 
-        var okButton = new Button { Text = "_Show" };
+        var okButton = new Button { Text = "_Tonen" };
         okButton.Accept += (s, e) =>
         {
             taskCompletionSource!.SetResult(true);
             Application.RequestStop();
         };
 
-        var cancelButton = new Button { Text = "_Cancel" };
+        var cancelButton = new Button { Text = "_Annuleren" };
         cancelButton.Accept += (s, e) =>
         {
             taskCompletionSource!.SetResult(false);

@@ -33,25 +33,25 @@ public class MainWindow : Toplevel
         ColorScheme = Colors.ColorSchemes["Base"];
         SelectedEdition = editions.First();
 
-        showByPosition = new("_Show by position", "", ShowListingsByPosition, canExecute: () => SelectedEdition.HasPlayDateAndTime)
+        showByPosition = new("_Toon op Positie", "", ShowListingsByPosition, canExecute: () => SelectedEdition.HasPlayDateAndTime)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = true,
         };
 
-        showByDate = new("_Show by date", "", ShowByDate, canExecute: () => SelectedEdition.HasPlayDateAndTime)
+        showByDate = new("_Toon op datum", "", ShowByDate, canExecute: () => SelectedEdition.HasPlayDateAndTime)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = false,
         };
 
-        showlightTheme = new("Light theme", "", ChangeToLigthTheme)
+        showlightTheme = new("Licht thema", "", ChangeToLigthTheme)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = ThemeManager.Instance.Theme == nameof(LightTheme)
         };
 
-        showDarkTheme = new("Dark theme", "", ChangeToDarkTheme)
+        showDarkTheme = new("Donker thema", "", ChangeToDarkTheme)
         {
             CheckType = MenuItemCheckStyle.Radio,
             Checked = ThemeManager.Instance.Theme == nameof(DarkTheme)
@@ -63,12 +63,12 @@ public class MainWindow : Toplevel
         {
             Menus =
             [
-                new MenuBarItem("_File", new MenuItem[] {
-                    new("_Selecteer Editie", "", async () => await ShowSelectedEditionDialog() ),
+                new MenuBarItem("_Bestand", new MenuItem[] {
+                    new("_Selecteer editie", "", async () => await ShowSelectedEditionDialog() ),
                     null!,
-                    new("_Quit", "", () => { Application.RequestStop (); })
+                    new("_Sluiten", "", () => { Application.RequestStop (); })
                 }),
-                new MenuBarItem("_View", new MenuItem[] {
+                new MenuBarItem("_Beeld", new MenuItem[] {
                     showByPosition,
                     showByDate,
                     null!,
@@ -76,7 +76,7 @@ public class MainWindow : Toplevel
                     showDarkTheme
                 }),
                 new MenuBarItem("_Help", new MenuItem[] {
-                    new("_About", "", async () => {await new AboutDialog().ShowDialogAsync(); })
+                    new("_Over", "", async () => {await new AboutDialog().ShowDialogAsync(); })
                 }),
             ],
             ColorScheme = theme.MenuBarColorScheme
