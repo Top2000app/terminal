@@ -9,8 +9,8 @@ public class EditionsDataSource : ITableSource
     public EditionsDataSource(SortedSet<Edition> editions)
     {
         this.Columns = 5;
-        this.Rows = editions.Count / this.Columns;
-
+        this.Rows = (editions.Count + this.Columns -1 )/ this.Columns;
+        
         this.items = new string[this.Rows][];
         for (var row = 0; row < this.Rows; row++)
         {
